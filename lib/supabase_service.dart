@@ -1,0 +1,749 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'models.dart';
+
+class SupabaseService {
+  final SupabaseClient client = Supabase.instance.client;
+
+  User? get currentUser => client.auth.currentUser;
+
+  String get currentUserId {
+    final user = currentUser;
+    if (user == null) throw Exception('User not logged in');
+    return user.id;
+  }
+
+  Future<void> signIn({required String email, required String password}) async {
+    await client.auth.signInWithPassword(email: email, password: password);
+  }
+
+  Future<void> signUp({required String email, required String password}) async {
+    await client.auth.signUp(email: email, password: password);
+  }
+
+  Future<void> signOut() async {
+    await client.auth.signOut();
+  }
+
+  Future<Profile?> getMyProfile() async {
+    final row = await client.from('profiles').select().eq('user_id', currentUserId).maybeSingle();
+    if (row == null) return null;
+    return Profile.fromMap(asMap(row));
+  }
+
+  Future<Company?> getMyCompany(String companyId) async {
+    final row = await client.from('companies').select().eq('id', companyId).maybeSingle();
+    if (row == null) return null;
+    return Company.fromMap(asMap(row));
+  }
+
+  Future<void> createCompanyAndProfile({
+    required String companyName,
+    required String fullName,
+  }) async {
+    if (companyName.trim().isEmpty) throw Exception('Company name is required');
+    if (fullName.trim().isEmpty) throw Exception('Your name is required');
+
+    final company = await client.from('companies').insert({
+      'name': companyName.trim(),
+      'owner_id': currentUserId,
+    }).select().single();
+
+    await client.from('profiles').insert({
+      'user_id': currentUserId,
+      'company_id': company['id'],
+      'full_name': fullName.trim(),
+      'role': 'owner',
+    });
+  }
+
+  Future<List<Supplier>> getSuppliers() async {
+    final rows = await client.from('suppliers').select().order('created_at');
+    return rows.map<Supplier>((item) => Supplier.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<Dsr>> getDsrs() async {
+    final rows = await client.from('dsrs').select().order('created_at');
+    return rows.map<Dsr>((item) => Dsr.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<Shopkeeper>> getShopkeepers() async {
+    final rows = await client.from('shopkeepers').select().order('created_at');
+    return rows.map<Shopkeeper>((item) => Shopkeeper.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<Product>> getProducts() async {
+    final rows = await client.from('products').select().order('created_at');
+    return rows.map<Product>((item) => Product.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<CompanyPurchase>> getCompanyPurchases() async {
+    final rows = await client.from('company_purchases').select().order('created_at', ascending: false);
+    return rows.map<CompanyPurchase>((item) => CompanyPurchase.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<DsrStock>> getDsrStocks() async {
+    final rows = await client.from('dsr_stocks').select().order('created_at');
+    return rows.map<DsrStock>((item) => DsrStock.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<LoadEntry>> getLoads() async {
+    final rows = await client.from('load_entries').select().order('created_at', ascending: false);
+    return rows.map<LoadEntry>((item) => LoadEntry.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<SaleEntry>> getSales() async {
+    final rows = await client.from('sales').select().order('created_at', ascending: false);
+    return rows.map<SaleEntry>((item) => SaleEntry.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<RecoveryEntry>> getRecoveries() async {
+    final rows = await client.from('recoveries').select().order('created_at', ascending: false);
+    return rows.map<RecoveryEntry>((item) => RecoveryEntry.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<ExpenseEntry>> getExpenses() async {
+    final rows = await client.from('expenses').select().order('created_at', ascending: false);
+    return rows.map<ExpenseEntry>((item) => ExpenseEntry.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<DepositEntry>> getDeposits() async {
+    final rows = await client.from('deposits').select().order('created_at', ascending: false);
+    return rows.map<DepositEntry>((item) => DepositEntry.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<ClaimEntry>> getClaims() async {
+    final rows = await client.from('claims').select().order('created_at', ascending: false);
+    return rows.map<ClaimEntry>((item) => ClaimEntry.fromMap(asMap(item))).toList();
+  }
+
+  Future<void> addSupplier({
+    required String companyId,
+    required String name,
+    required String phone,
+    required String address,
+  }) async {
+    if (name.trim().isEmpty) throw Exception('Supplier name is required');
+    await client.from('suppliers').insert({
+      'company_id': companyId,
+      'name': name.trim(),
+      'phone': phone.trim(),
+      'address': address.trim(),
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addDsr({
+    required String companyId,
+    required String supplierId,
+    required String name,
+    required String phone,
+    required String route,
+    required double salary,
+  }) async {
+    if (name.trim().isEmpty) throw Exception('DSR name is required');
+    await client.from('dsrs').insert({
+      'company_id': companyId,
+      'supplier_id': supplierId,
+      'name': name.trim(),
+      'phone': phone.trim(),
+      'route': route.trim(),
+      'salary': salary,
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addShopkeeper({
+    required String companyId,
+    required String dsrId,
+    required String shopName,
+    required String ownerName,
+    required String phone,
+    required String area,
+  }) async {
+    if (shopName.trim().isEmpty) throw Exception('Shop name is required');
+    await client.from('shopkeepers').insert({
+      'company_id': companyId,
+      'dsr_id': dsrId,
+      'shop_name': shopName.trim(),
+      'owner_name': ownerName.trim(),
+      'phone': phone.trim(),
+      'area': area.trim(),
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addProduct({
+    required String companyId,
+    required String name,
+    required String sku,
+    required String category,
+    required String brand,
+    required String batchNo,
+    required String mfgDate,
+    required String expDate,
+    required double purchasePrice,
+    required double sellingPrice,
+    required int warehouseStock,
+    required int lowStockLimit,
+    required int packetsPerCarton,
+    required double companyDiscount,
+    required double tradeDiscount,
+  }) async {
+    if (name.trim().isEmpty) throw Exception('Product name is required');
+    if (purchasePrice <= 0) throw Exception('Packet purchase price must be greater than 0');
+    if (sellingPrice <= 0) throw Exception('Packet selling price must be greater than 0');
+    if (packetsPerCarton <= 0) throw Exception('Packets per carton must be greater than 0');
+
+    await client.from('products').insert({
+      'company_id': companyId,
+      'name': name.trim(),
+      'sku': sku.trim(),
+      'category': category.trim(),
+      'brand': brand.trim(),
+      'batch_no': batchNo.trim(),
+      'mfg_date': mfgDate.trim().isEmpty ? null : mfgDate.trim(),
+      'exp_date': expDate.trim().isEmpty ? null : expDate.trim(),
+      'purchase_price': purchasePrice,
+      'selling_price': sellingPrice,
+      'warehouse_stock': warehouseStock,
+      'low_stock_limit': lowStockLimit,
+      'packets_per_carton': packetsPerCarton,
+      'company_discount': companyDiscount,
+      'trade_discount': tradeDiscount,
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addCompanyPurchase({
+    required String companyId,
+    required String productId,
+    required String batchNo,
+    required int cartons,
+    required int packetsPerCarton,
+    required double packetPurchasePrice,
+    required double companyDiscount,
+    required double paidAmount,
+    required String note,
+  }) async {
+    if (productId.isEmpty) throw Exception('Product is required');
+    if (cartons <= 0) throw Exception('Cartons must be greater than 0');
+    if (packetsPerCarton <= 0) throw Exception('Packets per carton must be greater than 0');
+    if (packetPurchasePrice <= 0) throw Exception('Packet purchase price must be greater than 0');
+
+    final totalPackets = cartons * packetsPerCarton;
+    final grossBill = totalPackets * packetPurchasePrice;
+    final safeDiscount = companyDiscount < 0 ? 0 : companyDiscount;
+    final totalBill = (grossBill - safeDiscount).clamp(0, double.infinity).toDouble();
+    final safePaid = paidAmount < 0 ? 0 : paidAmount;
+    final remaining = (totalBill - safePaid).clamp(0, double.infinity).toDouble();
+
+    await client.from('company_purchases').insert({
+      'company_id': companyId,
+      'product_id': productId,
+      'batch_no': batchNo.trim(),
+      'cartons': cartons,
+      'packets_per_carton': packetsPerCarton,
+      'total_packets': totalPackets,
+      'packet_purchase_price': packetPurchasePrice,
+      'company_discount': safeDiscount,
+      'total_bill': totalBill,
+      'paid_amount': safePaid,
+      'remaining_amount': remaining,
+      'note': note.trim(),
+      'created_by': currentUserId,
+    });
+
+    final product = await client.from('products').select('warehouse_stock').eq('id', productId).single();
+    final warehouseStock = asInt(product['warehouse_stock']);
+    await client.from('products').update({
+      'warehouse_stock': warehouseStock + totalPackets,
+      'purchase_price': packetPurchasePrice,
+      'packets_per_carton': packetsPerCarton,
+      'company_discount': safeDiscount,
+      if (batchNo.trim().isNotEmpty) 'batch_no': batchNo.trim(),
+    }).eq('id', productId);
+
+  }
+
+  Future<void> loadStock({
+    required String companyId,
+    required String dsrId,
+    required String supplierId,
+    required String productId,
+    required int quantity,
+  }) async {
+    if (quantity <= 0) throw Exception('Quantity must be greater than 0');
+
+    final product = await client.from('products').select('warehouse_stock').eq('id', productId).single();
+    final warehouseStock = asInt(product['warehouse_stock']);
+    if (warehouseStock < quantity) throw Exception('Not enough warehouse stock');
+
+    await client.from('products').update({'warehouse_stock': warehouseStock - quantity}).eq('id', productId);
+
+    final existing = await client
+        .from('dsr_stocks')
+        .select()
+        .eq('dsr_id', dsrId)
+        .eq('product_id', productId)
+        .maybeSingle();
+
+    if (existing == null) {
+      await client.from('dsr_stocks').insert({
+        'company_id': companyId,
+        'dsr_id': dsrId,
+        'product_id': productId,
+        'quantity': quantity,
+      });
+    } else {
+      await client.from('dsr_stocks').update({
+        'quantity': asInt(existing['quantity']) + quantity,
+      }).eq('id', existing['id']);
+    }
+
+    await client.from('load_entries').insert({
+      'company_id': companyId,
+      'dsr_id': dsrId,
+      'supplier_id': supplierId,
+      'product_id': productId,
+      'quantity': quantity,
+      'created_by': currentUserId,
+    });
+
+    await client.from('stock_movements').insert({
+      'company_id': companyId,
+      'product_id': productId,
+      'dsr_id': dsrId,
+      'movement_type': 'Load to DSR',
+      'quantity': quantity,
+      'note': 'Warehouse stock loaded to DSR',
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> bookSale({
+    required String companyId,
+    required String billNo,
+    required String dsrId,
+    required String shopkeeperId,
+    required String productId,
+    required int quantity,
+    required double price,
+    required SaleType type,
+  }) async {
+    if (billNo.trim().isEmpty) throw Exception('Bill number is required');
+    if (quantity <= 0) throw Exception('Quantity must be greater than 0');
+    if (price <= 0) throw Exception('Price must be greater than 0');
+
+    final existing = await client
+        .from('dsr_stocks')
+        .select()
+        .eq('dsr_id', dsrId)
+        .eq('product_id', productId)
+        .maybeSingle();
+
+    if (existing == null) throw Exception('No DSR stock for this product');
+
+    final dsrStock = asInt(existing['quantity']);
+    if (dsrStock < quantity) throw Exception('Not enough DSR stock');
+
+    await client.from('dsr_stocks').update({'quantity': dsrStock - quantity}).eq('id', existing['id']);
+
+    await client.from('sales').insert({
+      'company_id': companyId,
+      'bill_no': billNo.trim(),
+      'dsr_id': dsrId,
+      'shopkeeper_id': shopkeeperId,
+      'product_id': productId,
+      'quantity': quantity,
+      'price': price,
+      'sale_type': saleTypeToDb(type),
+      'created_by': currentUserId,
+    });
+
+    if (type == SaleType.credit) {
+      final shop = await client.from('shopkeepers').select('pending_credit').eq('id', shopkeeperId).single();
+      await client.from('shopkeepers').update({
+        'pending_credit': asDouble(shop['pending_credit']) + (quantity * price),
+      }).eq('id', shopkeeperId);
+    }
+
+    await client.from('stock_movements').insert({
+      'company_id': companyId,
+      'product_id': productId,
+      'dsr_id': dsrId,
+      'movement_type': type == SaleType.cash ? 'Cash Sale' : 'Credit Sale',
+      'quantity': -quantity,
+      'note': billNo.trim(),
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addRecovery({
+    required String companyId,
+    required String chequeBillNo,
+    required String dsrId,
+    required String shopkeeperId,
+    required double amount,
+  }) async {
+    if (amount <= 0) throw Exception('Amount must be greater than 0');
+
+    final shop = await client.from('shopkeepers').select('pending_credit').eq('id', shopkeeperId).single();
+    final pending = asDouble(shop['pending_credit']);
+
+    if (amount > pending) throw Exception('Recovery is greater than pending credit');
+
+    final balanceAfter = pending - amount;
+
+    await client.from('shopkeepers').update({'pending_credit': balanceAfter}).eq('id', shopkeeperId);
+
+    await client.from('recoveries').insert({
+      'company_id': companyId,
+      'cheque_bill_no': chequeBillNo.trim(),
+      'dsr_id': dsrId,
+      'shopkeeper_id': shopkeeperId,
+      'received_amount': amount,
+      'balance_after': balanceAfter,
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addExpense({
+    required String companyId,
+    required String dsrId,
+    required String type,
+    required double amount,
+    required String note,
+  }) async {
+    if (amount <= 0) throw Exception('Amount must be greater than 0');
+    await client.from('expenses').insert({
+      'company_id': companyId,
+      'dsr_id': dsrId,
+      'type': type,
+      'amount': amount,
+      'note': note.trim(),
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addDeposit({
+    required String companyId,
+    required String party,
+    required Map<int, int> notes,
+    required double coins,
+  }) async {
+    await client.from('deposits').insert({
+      'company_id': companyId,
+      'party': party.trim().isEmpty ? 'Deposit' : party.trim(),
+      'note_5000': notes[5000] ?? 0,
+      'note_1000': notes[1000] ?? 0,
+      'note_500': notes[500] ?? 0,
+      'note_100': notes[100] ?? 0,
+      'note_50': notes[50] ?? 0,
+      'note_20': notes[20] ?? 0,
+      'note_10': notes[10] ?? 0,
+      'coins': coins,
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> addClaim({
+    required String companyId,
+    required String productId,
+    required String type,
+    required int quantity,
+    required double amount,
+    required String note,
+  }) async {
+    if (quantity <= 0) throw Exception('Quantity must be greater than 0');
+    await client.from('claims').insert({
+      'company_id': companyId,
+      'product_id': productId,
+      'type': type,
+      'quantity': quantity,
+      'amount': amount,
+      'note': note.trim(),
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> upsertCashCount({
+    required String companyId,
+    required String dsrId,
+    required String date,
+    required int note5000,
+    required int note1000,
+    required int note500,
+    required int note100,
+    required int note50,
+    required int note20,
+    required int note10,
+    required double coins,
+  }) async {
+    final existing = await client
+        .from('cash_counts')
+        .select('id')
+        .eq('dsr_id', dsrId)
+        .eq('date', date)
+        .maybeSingle();
+
+    final data = {
+      'company_id': companyId,
+      'date': date,
+      'dsr_id': dsrId,
+      'note_5000': note5000,
+      'note_1000': note1000,
+      'note_500': note500,
+      'note_100': note100,
+      'note_50': note50,
+      'note_20': note20,
+      'note_10': note10,
+      'coins': coins,
+      'created_by': currentUserId,
+    };
+
+    if (existing == null) {
+      await client.from('cash_counts').insert(data);
+    } else {
+      await client.from('cash_counts').update(data).eq('id', existing['id']);
+    }
+  }
+
+
+  Future<void> updateSupplier({
+    required String id,
+    required String name,
+    required String phone,
+    required String address,
+  }) async {
+    if (name.trim().isEmpty) throw Exception('Supplier name is required');
+
+    await client.from('suppliers').update({
+      'name': name.trim(),
+      'phone': phone.trim(),
+      'address': address.trim(),
+    }).eq('id', id);
+  }
+
+  Future<void> deleteSupplier(String id) async {
+    final linkedDsrs = await client
+        .from('dsrs')
+        .select('name, route')
+        .eq('supplier_id', id);
+
+    if (linkedDsrs.isNotEmpty) {
+      final linkedNames = linkedDsrs.map<String>((item) {
+        final name = item['name']?.toString() ?? 'Unknown DSR';
+        final route = item['route']?.toString() ?? '';
+        return route.trim().isEmpty ? name : '$name ($route)';
+      }).join(', ');
+
+      throw Exception(
+        'Cannot delete supplier because it is linked with DSR: $linkedNames',
+      );
+    }
+
+    await client.from('suppliers').delete().eq('id', id);
+  }
+
+  Future<void> updateDsr({
+    required String id,
+    required String supplierId,
+    required String name,
+    required String phone,
+    required String route,
+    required double salary,
+  }) async {
+    if (name.trim().isEmpty) throw Exception('DSR name is required');
+
+    await client.from('dsrs').update({
+      'supplier_id': supplierId,
+      'name': name.trim(),
+      'phone': phone.trim(),
+      'route': route.trim(),
+      'salary': salary,
+    }).eq('id', id);
+  }
+
+  Future<void> deleteDsr(String id) async {
+    final linkedShops = await client
+        .from('shopkeepers')
+        .select('shop_name')
+        .eq('dsr_id', id);
+
+    final linkedSales = await client
+        .from('sales')
+        .select('bill_no')
+        .eq('dsr_id', id)
+        .limit(5);
+
+    if (linkedShops.isNotEmpty || linkedSales.isNotEmpty) {
+      final shopNames = linkedShops.map<String>((item) {
+        return item['shop_name']?.toString() ?? 'Unknown Shop';
+      }).join(', ');
+
+      final billNumbers = linkedSales.map<String>((item) {
+        return item['bill_no']?.toString() ?? 'Unknown Bill';
+      }).join(', ');
+
+      final parts = <String>[];
+
+      if (shopNames.isNotEmpty) {
+        parts.add('linked shops: $shopNames');
+      }
+
+      if (billNumbers.isNotEmpty) {
+        parts.add('linked sales bills: $billNumbers');
+      }
+
+      throw Exception('Cannot delete DSR because it has ${parts.join(' and ')}.');
+    }
+
+    await client.from('dsrs').delete().eq('id', id);
+  }
+
+  Future<void> updateShopkeeper({
+    required String id,
+    required String dsrId,
+    required String shopName,
+    required String ownerName,
+    required String phone,
+    required String area,
+  }) async {
+    if (shopName.trim().isEmpty) throw Exception('Shop name is required');
+
+    await client.from('shopkeepers').update({
+      'dsr_id': dsrId,
+      'shop_name': shopName.trim(),
+      'owner_name': ownerName.trim(),
+      'phone': phone.trim(),
+      'area': area.trim(),
+    }).eq('id', id);
+  }
+
+  Future<void> deleteShopkeeper(String id) async {
+    final linkedSales = await client
+        .from('sales')
+        .select('bill_no')
+        .eq('shopkeeper_id', id)
+        .limit(5);
+
+    final linkedRecoveries = await client
+        .from('recoveries')
+        .select('cheque_bill_no')
+        .eq('shopkeeper_id', id)
+        .limit(5);
+
+    if (linkedSales.isNotEmpty || linkedRecoveries.isNotEmpty) {
+      final bills = linkedSales.map<String>((item) {
+        return item['bill_no']?.toString() ?? 'Unknown Bill';
+      }).join(', ');
+
+      final recoveryBills = linkedRecoveries.map<String>((item) {
+        return item['cheque_bill_no']?.toString() ?? 'Unknown Recovery';
+      }).join(', ');
+
+      final parts = <String>[];
+
+      if (bills.isNotEmpty) {
+        parts.add('sales bills: $bills');
+      }
+
+      if (recoveryBills.isNotEmpty) {
+        parts.add('recovery bills: $recoveryBills');
+      }
+
+      throw Exception(
+        'Cannot delete shopkeeper because it has linked ${parts.join(' and ')}.',
+      );
+    }
+
+    await client.from('shopkeepers').delete().eq('id', id);
+  }
+
+  Future<void> updateProduct({
+    required String id,
+    required String name,
+    required String sku,
+    required String category,
+    required String brand,
+    required String batchNo,
+    required String mfgDate,
+    required String expDate,
+    required double purchasePrice,
+    required double sellingPrice,
+    required int warehouseStock,
+    required int lowStockLimit,
+    required int packetsPerCarton,
+    required double companyDiscount,
+    required double tradeDiscount,
+  }) async {
+    if (name.trim().isEmpty) throw Exception('Product name is required');
+    if (purchasePrice <= 0) throw Exception('Packet purchase price must be greater than 0');
+    if (sellingPrice <= 0) throw Exception('Packet selling price must be greater than 0');
+    if (packetsPerCarton <= 0) throw Exception('Packets per carton must be greater than 0');
+
+    await client.from('products').update({
+      'name': name.trim(),
+      'sku': sku.trim(),
+      'category': category.trim(),
+      'brand': brand.trim(),
+      'batch_no': batchNo.trim(),
+      'mfg_date': mfgDate.trim().isEmpty ? null : mfgDate.trim(),
+      'exp_date': expDate.trim().isEmpty ? null : expDate.trim(),
+      'purchase_price': purchasePrice,
+      'selling_price': sellingPrice,
+      'warehouse_stock': warehouseStock,
+      'low_stock_limit': lowStockLimit,
+      'packets_per_carton': packetsPerCarton,
+      'company_discount': companyDiscount,
+      'trade_discount': tradeDiscount,
+    }).eq('id', id);
+  }
+
+  Future<void> deleteProduct(String id) async {
+    final linkedSales = await client
+        .from('sales')
+        .select('bill_no')
+        .eq('product_id', id)
+        .limit(5);
+
+    final linkedLoads = await client
+        .from('load_entries')
+        .select('id')
+        .eq('product_id', id)
+        .limit(5);
+
+    final linkedStock = await client
+        .from('dsr_stocks')
+        .select('dsr_id, quantity')
+        .eq('product_id', id);
+
+    if (linkedSales.isNotEmpty || linkedLoads.isNotEmpty || linkedStock.isNotEmpty) {
+      final bills = linkedSales.map<String>((item) {
+        return item['bill_no']?.toString() ?? 'Unknown Bill';
+      }).join(', ');
+
+      final parts = <String>[];
+
+      if (bills.isNotEmpty) {
+        parts.add('sales bills: $bills');
+      }
+
+      if (linkedLoads.isNotEmpty) {
+        parts.add('${linkedLoads.length} load record(s)');
+      }
+
+      if (linkedStock.isNotEmpty) {
+        parts.add('${linkedStock.length} DSR stock record(s)');
+      }
+
+      throw Exception(
+        'Cannot delete product because it has linked ${parts.join(', ')}.',
+      );
+    }
+
+    await client.from('products').delete().eq('id', id);
+  }
+
+
+}

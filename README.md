@@ -1,18 +1,24 @@
-# day_2_crypto_track
+# Smart Account Manager Supabase Final Fixed
 
-A new Flutter project.
+## Setup
 
-## Getting Started
+1. Run the SQL schema in Supabase.
+2. Open `lib/supabase_config.dart`.
+3. Replace `YOUR_SUPABASE_URL` and `YOUR_SUPABASE_ANON_KEY`.
+4. Run:
 
-This project is a starting point for a Flutter application.
+```bash
+flutter clean
+flutter pub get
+flutter run -d chrome
+```
 
-A few resources to get you started if this is your first Flutter project:
+## First Use
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-"# Smart-Account-Manager" 
+1. Create account.
+2. Login.
+3. Create company profile.
+4. Add supplier, DSR, shopkeeper, product.
+5. Load stock to DSR.
+6. Book sale and recovery.
+7. Check DSR Daily Report.
