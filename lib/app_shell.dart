@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'app_state.dart';
 import 'app_theme.dart';
 import 'app_widgets.dart';
@@ -27,12 +28,12 @@ class _AppShellState extends State<AppShell> {
 
   final List<String> menu = const [
     'Dashboard',
-    'Setup Company',
     'DSR / Booker',
-    'Suppliers',
-    'Shopkeepers',
-    'Products',
-    'Load Form',
+    'Salesmen',
+    'Primary Receiving',
+    'Stock',
+    'Company Ledger',
+    'Secondary Order',
     'Order Booking',
     'Recovery',
     'DSR Daily Report',
@@ -50,7 +51,15 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width >= 980;
+    final screen = MediaQuery.of(context).size;
+    final isDesktop = screen.width >= 980;
+    final expandedSidebarWidth = (screen.width * 0.21).clamp(240.0, 275.0).toDouble();
+    final collapsedSidebarWidth = (screen.width * 0.065).clamp(76.0, 82.0).toDouble();
+    final pagePadding = screen.width < 520
+        ? 12.0
+        : screen.width < 980
+            ? 14.0
+            : 18.0;
 
     return Scaffold(
       drawer: isDesktop ? null : Drawer(child: sidebar(isDesktop: false)),
@@ -68,7 +77,7 @@ class _AppShellState extends State<AppShell> {
             AnimatedContainer(
               duration: const Duration(milliseconds: 280),
               curve: Curves.easeInOutCubic,
-              width: sidebarOpen ? 275 : 82,
+              width: sidebarOpen ? expandedSidebarWidth : collapsedSidebarWidth,
               child: sidebar(isDesktop: true),
             ),
           Expanded(
@@ -78,7 +87,7 @@ class _AppShellState extends State<AppShell> {
                 if (busy) const LinearProgressIndicator(minHeight: 2),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(18),
+                    padding: EdgeInsets.all(pagePadding),
                     child: selectedPage(),
                   ),
                 ),
@@ -161,33 +170,41 @@ class _AppShellState extends State<AppShell> {
   }
 
   Widget sidebarHeader(bool isDesktop) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final logoSize = screenWidth < 520 ? 46.0 : 52.0;
+    final padding = sidebarOpen || !isDesktop
+        ? (screenWidth < 520 ? 16.0 : 22.0)
+        : 14.0;
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(sidebarOpen || !isDesktop ? 22 : 14),
+      padding: EdgeInsets.all(padding),
       child: Column(
         crossAxisAlignment:
             sidebarOpen || !isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           Container(
-            height: 52,
-            width: 52,
+            height: logoSize,
+            width: logoSize,
             decoration: BoxDecoration(
               color: AppTheme.primary,
               borderRadius: BorderRadius.circular(17),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.account_balance_wallet_rounded,
               color: Colors.white,
-              size: 28,
+              size: logoSize * 0.54,
             ),
           ),
           if (sidebarOpen || !isDesktop) ...[
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Smart Account',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 23,
+                fontSize: screenWidth < 520 ? 20 : 23,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -258,11 +275,11 @@ class _AppShellState extends State<AppShell> {
   IconData menuIcon(int index) {
     final icons = [
       Icons.dashboard_rounded,
-      Icons.business_rounded,
       Icons.badge_rounded,
       Icons.local_shipping_rounded,
-      Icons.store_rounded,
       Icons.inventory_2_rounded,
+      Icons.warehouse_rounded,
+      Icons.account_balance_wallet_rounded,
       Icons.move_down_rounded,
       Icons.point_of_sale_rounded,
       Icons.payments_rounded,
@@ -277,9 +294,14 @@ class _AppShellState extends State<AppShell> {
   }
 
   Widget topBar(bool isDesktop) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final barHeight = screenWidth < 620 ? 64.0 : 76.0;
+    final horizontalPadding = screenWidth < 620 ? 12.0 : 22.0;
+    final titleSize = screenWidth < 620 ? 19.0 : 24.0;
+
     return Container(
-      height: 76,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      constraints: BoxConstraints(minHeight: barHeight),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xffe5e7eb))),
@@ -305,21 +327,66 @@ class _AppShellState extends State<AppShell> {
           Expanded(
             child: Text(
               menu[selectedIndex],
-              style: const TextStyle(
-                fontSize: 24,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: titleSize,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.dark,
               ),
             ),
           ),
-          primaryButton('Refresh', Icons.refresh_rounded, refresh),
+          if (widget.state.profile != null) ...[
+            screenWidth < 520
+                ? IconButton(
+                    tooltip: 'Company Setup',
+                    onPressed: () => openSetupCompany(context),
+                    icon: const Icon(Icons.business_rounded, color: AppTheme.primary),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: () => openSetupCompany(context),
+                    icon: const Icon(Icons.business_rounded, size: 18),
+                    label: const Text('Company'),
+                  ),
+            const SizedBox(width: 10),
+          ],
+          screenWidth < 430
+              ? IconButton(
+                  tooltip: 'Refresh',
+                  onPressed: refresh,
+                  icon: const Icon(Icons.refresh_rounded, color: AppTheme.primary),
+                )
+              : primaryButton('Refresh', Icons.refresh_rounded, refresh),
         ],
       ),
     );
   }
 
+
+  void openSetupCompany(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: AppTheme.softBg,
+          appBar: AppBar(
+            title: const Text('Company Setup'),
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(18),
+              child: SetupCompanyPage(state: widget.state, onChanged: refresh),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget selectedPage() {
-    if (selectedIndex != 1 && widget.state.profile == null) {
+    if (widget.state.profile == null) {
       return SetupCompanyPage(state: widget.state, onChanged: refresh);
     }
 
@@ -327,15 +394,15 @@ class _AppShellState extends State<AppShell> {
       case 0:
         return DashboardPage(state: widget.state, onChanged: refresh);
       case 1:
-        return SetupCompanyPage(state: widget.state, onChanged: refresh);
-      case 2:
         return DsrPage(state: widget.state, onChanged: refresh);
-      case 3:
+      case 2:
         return SupplierPage(state: widget.state, onChanged: refresh);
-      case 4:
-        return ShopkeeperPage(state: widget.state, onChanged: refresh);
-      case 5:
+      case 3:
         return ProductPage(state: widget.state, onChanged: refresh);
+      case 4:
+        return StockPage(state: widget.state, onChanged: refresh);
+      case 5:
+        return CompanyLedgerPage(state: widget.state, onChanged: refresh);
       case 6:
         return LoadFormPage(state: widget.state, onChanged: refresh);
       case 7:

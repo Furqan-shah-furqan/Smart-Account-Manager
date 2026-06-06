@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
@@ -53,22 +51,15 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.of(context).size;
-    final cardWidth = math.min(440.0, screen.width - 28);
-    final cardPadding = screen.width < 520 ? 18.0 : 24.0;
-
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(screen.width < 520 ? 14 : 20),
-            child: Container(
-              width: cardWidth,
-              padding: EdgeInsets.all(cardPadding),
-              decoration: cardDecoration(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+      body: Center(
+        child: Container(
+          width: 440,
+          padding: const EdgeInsets.all(24),
+          decoration: cardDecoration(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Container(
                 height: 58,
                 width: 58,
@@ -79,10 +70,9 @@ class _LoginPageState extends State<LoginPage> {
                 child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white),
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Smart Account Manager',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: screen.width < 520 ? 21 : 25, fontWeight: FontWeight.w900),
+                style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 6),
               const Text(
@@ -116,9 +106,7 @@ class _LoginPageState extends State<LoginPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xff6b7280), fontSize: 12),
               ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
       ),

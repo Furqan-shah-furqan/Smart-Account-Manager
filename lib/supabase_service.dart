@@ -216,6 +216,8 @@ class SupabaseService {
 
   Future<void> addCompanyPurchase({
     required String companyId,
+    required String invoiceNo,
+    required String companyName,
     required String productId,
     required String batchNo,
     required int cartons,
@@ -225,6 +227,8 @@ class SupabaseService {
     required double paidAmount,
     required String note,
   }) async {
+    if (invoiceNo.trim().isEmpty) throw Exception('Invoice number is required');
+    if (companyName.trim().isEmpty) throw Exception('Company name is required');
     if (productId.isEmpty) throw Exception('Product is required');
     if (cartons <= 0) throw Exception('Cartons must be greater than 0');
     if (packetsPerCarton <= 0) throw Exception('Packets per carton must be greater than 0');
@@ -239,6 +243,8 @@ class SupabaseService {
 
     await client.from('company_purchases').insert({
       'company_id': companyId,
+      'invoice_no': invoiceNo.trim(),
+      'company_name': companyName.trim(),
       'product_id': productId,
       'batch_no': batchNo.trim(),
       'cartons': cartons,

@@ -228,6 +228,8 @@ class Product {
 class CompanyPurchase {
   final String id;
   final String date;
+  final String invoiceNo;
+  final String companyName;
   final String productId;
   final String batchNo;
   final int cartons;
@@ -243,6 +245,8 @@ class CompanyPurchase {
   CompanyPurchase({
     required this.id,
     required this.date,
+    required this.invoiceNo,
+    required this.companyName,
     required this.productId,
     required this.batchNo,
     required this.cartons,
@@ -260,6 +264,8 @@ class CompanyPurchase {
     return CompanyPurchase(
       id: asText(map['id']),
       date: asText(map['date']),
+      invoiceNo: asText(map['invoice_no']),
+      companyName: asText(map['company_name']),
       productId: asText(map['product_id']),
       batchNo: asText(map['batch_no']),
       cartons: asInt(map['cartons']),
