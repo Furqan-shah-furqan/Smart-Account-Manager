@@ -1125,6 +1125,36 @@ class SupplierPage extends StatelessWidget {
   }
 }
 
+class SalesTeamPage extends StatelessWidget {
+  final AppState state;
+  final Future<void> Function() onChanged;
+
+  const SalesTeamPage({
+    super.key,
+    required this.state,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SupplierPage(
+          state: state,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 18),
+        DsrPage(
+          state: state,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 90),
+      ],
+    );
+  }
+}
+
 class ShopkeeperPage extends StatelessWidget {
   final AppState state;
   final Future<void> Function() onChanged;

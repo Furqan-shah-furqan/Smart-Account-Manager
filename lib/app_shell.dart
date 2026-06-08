@@ -25,16 +25,18 @@ class _AppShellState extends State<AppShell> {
   int selectedIndex = 0;
   bool busy = false;
   bool sidebarOpen = true;
+  bool logoHover = false;
 
   final List<String> menu = const [
     'Dashboard',
-    'Primary Receiving',
     'All Products',
-    'Stock',
-    'Company Ledger',
+    'DSR & Salesman',
+    'Primary Receiving',
     'Secondary Order',
     'Load Form Settlement',
     'Order Booking',
+    'Company Ledger',
+    'Stock',
     'Recovery',
     'Expenses',
     'Deposit',
@@ -52,7 +54,9 @@ class _AppShellState extends State<AppShell> {
 
   String get pageTitle {
     if (showingCompanySetup) return 'Company';
-    if (selectedIndex >= 0 && selectedIndex < menu.length) return menu[selectedIndex];
+    if (selectedIndex >= 0 && selectedIndex < menu.length) {
+      return menu[selectedIndex];
+    }
     return 'Dashboard';
   }
 
@@ -60,7 +64,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 980;
-    final sideWidth = sidebarOpen ? (screenWidth < 1180 ? 248.0 : 275.0) : 82.0;
+    final sideWidth = sidebarOpen ? (screenWidth < 1180 ? 222.0 : 238.0) : 68.0;
 
     return Scaffold(
       drawer: isDesktop ? null : Drawer(child: sidebar(isDesktop: false)),
@@ -70,7 +74,7 @@ class _AppShellState extends State<AppShell> {
               onPressed: () => showProductDialog(context, widget.state, refresh),
               backgroundColor: AppTheme.primary,
               foregroundColor: Colors.white,
-              child: Icon(Icons.add_box_rounded),
+              child: const Icon(Icons.add_box_rounded),
             ),
       appBar: isDesktop
           ? null
@@ -146,22 +150,24 @@ class _AppShellState extends State<AppShell> {
                     waitDuration: const Duration(milliseconds: 350),
                     child: Container(
                       margin: EdgeInsets.symmetric(
-                        horizontal: expanded ? 12 : 10,
-                        vertical: 4,
+                        horizontal: expanded ? 10 : 8,
+                        vertical: 3,
                       ),
                       child: ListTile(
+                        dense: true,
                         selected: active,
                         selectedTileColor: AppTheme.primary,
-                        minLeadingWidth: 26,
+                        minLeadingWidth: 24,
                         contentPadding: EdgeInsets.symmetric(
-                          horizontal: expanded ? 14 : 13,
-                          vertical: 2,
+                          horizontal: expanded ? 12 : 12,
+                          vertical: 1,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                         leading: Icon(
                           menuIcon(index),
+                          size: 21,
                           color: active ? Colors.white : const Color(0xffd1d5db),
                         ),
                         title: expanded
@@ -196,43 +202,77 @@ class _AppShellState extends State<AppShell> {
 
   Widget sidebarHeader(bool isDesktop) {
     final expanded = sidebarOpen || !isDesktop;
+    final tooltip = sidebarOpen ? 'Close sidebar' : 'Open sidebar';
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(expanded ? 22 : 14),
-      child: Column(
-        crossAxisAlignment: expanded ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      padding: EdgeInsets.fromLTRB(
+        expanded ? 14 : 8,
+        18,
+        expanded ? 12 : 8,
+        16,
+      ),
+      child: Row(
+        mainAxisAlignment: expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
         children: [
-          Container(
-            height: 52,
-            width: 52,
-            decoration: BoxDecoration(
-              color: AppTheme.primary,
-              borderRadius: BorderRadius.circular(17),
-            ),
-            child: const Icon(
-              Icons.account_balance_wallet_rounded,
-              color: Colors.white,
-              size: 28,
+          Tooltip(
+            message: isDesktop ? tooltip : 'Smart Account',
+            child: MouseRegion(
+              onEnter: (_) => setState(() => logoHover = true),
+              onExit: (_) => setState(() => logoHover = false),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(17),
+                onTap: isDesktop
+                    ? () => setState(() => sidebarOpen = !sidebarOpen)
+                    : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  height: 50,
+                  width: 50,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary,
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                  child: Icon(
+                    logoHover && isDesktop
+                        ? (sidebarOpen
+                            ? Icons.keyboard_double_arrow_left_rounded
+                            : Icons.keyboard_double_arrow_right_rounded)
+                        : Icons.account_balance_wallet_rounded,
+                    color: Colors.white,
+                    size: 27,
+                  ),
+                ),
+              ),
             ),
           ),
           if (expanded) ...[
-            const SizedBox(height: 12),
-            const Text(
-              'Smart Account',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 23,
-                fontWeight: FontWeight.w900,
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Smart Account',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Supabase Cloud',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Color(0xff9ca3af), fontSize: 13),
+                  ),
+                ],
               ),
-            ),
-            const Text(
-              'Supabase Cloud',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Color(0xff9ca3af), fontSize: 14),
             ),
           ],
         ],
@@ -247,8 +287,8 @@ class _AppShellState extends State<AppShell> {
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeInOutCubic,
       width: double.infinity,
-      margin: const EdgeInsets.all(14),
-      padding: EdgeInsets.all(expanded ? 14 : 8),
+      margin: EdgeInsets.all(expanded ? 12 : 8),
+      padding: EdgeInsets.all(expanded ? 12 : 8),
       decoration: BoxDecoration(
         color: const Color(0xff1f2937),
         borderRadius: BorderRadius.circular(18),
@@ -301,13 +341,14 @@ class _AppShellState extends State<AppShell> {
   IconData menuIcon(int index) {
     final icons = [
       Icons.dashboard_rounded,
-      Icons.inventory_2_rounded,
       Icons.table_chart_rounded,
-      Icons.warehouse_rounded,
-      Icons.account_balance_wallet_rounded,
+      Icons.groups_rounded,
+      Icons.inventory_2_rounded,
       Icons.move_down_rounded,
       Icons.receipt_long_rounded,
       Icons.point_of_sale_rounded,
+      Icons.account_balance_wallet_rounded,
+      Icons.warehouse_rounded,
       Icons.payments_rounded,
       Icons.money_off_rounded,
       Icons.account_balance_rounded,
@@ -328,17 +369,6 @@ class _AppShellState extends State<AppShell> {
       ),
       child: Row(
         children: [
-          IconButton(
-            tooltip: sidebarOpen ? 'Close sidebar' : 'Open sidebar',
-            onPressed: () => setState(() => sidebarOpen = !sidebarOpen),
-            icon: AnimatedRotation(
-              turns: sidebarOpen ? 0 : 0.5,
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeInOut,
-              child: const Icon(Icons.menu_open_rounded),
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
               pageTitle,
@@ -384,26 +414,28 @@ class _AppShellState extends State<AppShell> {
       case 0:
         return DashboardPage(state: widget.state, onChanged: refresh);
       case 1:
-        return ProductPage(state: widget.state, onChanged: refresh);
-      case 2:
         return AllProductsPage(state: widget.state, onChanged: refresh);
+      case 2:
+        return SalesTeamPage(state: widget.state, onChanged: refresh);
       case 3:
-        return StockPage(state: widget.state, onChanged: refresh);
+        return ProductPage(state: widget.state, onChanged: refresh);
       case 4:
-        return CompanyLedgerPage(state: widget.state, onChanged: refresh);
-      case 5:
         return LoadFormPage(state: widget.state, onChanged: refresh);
-      case 6:
+      case 5:
         return LoadFormSettlementPage(state: widget.state, onChanged: refresh);
-      case 7:
+      case 6:
         return OrderBookingPage(state: widget.state, onChanged: refresh);
+      case 7:
+        return CompanyLedgerPage(state: widget.state, onChanged: refresh);
       case 8:
-        return RecoveryPage(state: widget.state, onChanged: refresh);
+        return StockPage(state: widget.state, onChanged: refresh);
       case 9:
-        return ExpensePage(state: widget.state, onChanged: refresh);
+        return RecoveryPage(state: widget.state, onChanged: refresh);
       case 10:
-        return DepositPage(state: widget.state, onChanged: refresh);
+        return ExpensePage(state: widget.state, onChanged: refresh);
       case 11:
+        return DepositPage(state: widget.state, onChanged: refresh);
+      case 12:
         return ClaimPage(state: widget.state, onChanged: refresh);
       default:
         return ReportsPage(state: widget.state, onChanged: refresh);
