@@ -31,10 +31,19 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cashTotal = state.cashSales + state.totalRecovery + state.totalExpenses + state.depositTotal;
-    final cashInPercent = cashTotal == 0 ? 0.0 : (state.cashSales + state.totalRecovery) / cashTotal;
-    final cashOutPercent = cashTotal == 0 ? 0.0 : (state.totalExpenses + state.depositTotal) / cashTotal;
-    final stockHealth = state.products.isEmpty ? 0.0 : (state.products.length - state.lowStockCount) / state.products.length;
+    final cashTotal = state.cashSales +
+        state.totalRecovery +
+        state.totalExpenses +
+        state.depositTotal;
+    final cashInPercent = cashTotal == 0
+        ? 0.0
+        : (state.cashSales + state.totalRecovery) / cashTotal;
+    final cashOutPercent = cashTotal == 0
+        ? 0.0
+        : (state.totalExpenses + state.depositTotal) / cashTotal;
+    final stockHealth = state.products.isEmpty
+        ? 0.0
+        : (state.products.length - state.lowStockCount) / state.products.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,14 +54,60 @@ class DashboardPage extends StatelessWidget {
           spacing: 14,
           runSpacing: 14,
           children: [
-            StatCard(title: 'Gross Sale', value: state.rs(state.grossSale), icon: Icons.trending_up_rounded, color: Colors.green, onTap: () => openMetric(context, DashboardMetricType.grossSale)),
-            StatCard(title: 'Cash Sale', value: state.rs(state.cashSales), icon: Icons.payments_rounded, color: Colors.blue, onTap: () => openMetric(context, DashboardMetricType.cashSale)),
-            StatCard(title: 'Credit Sale', value: state.rs(state.creditSales), icon: Icons.credit_score_rounded, color: Colors.red, onTap: () => openMetric(context, DashboardMetricType.creditSale)),
-            StatCard(title: 'Recovery', value: state.rs(state.totalRecovery), icon: Icons.call_received_rounded, color: Colors.purple, onTap: () => openMetric(context, DashboardMetricType.recovery)),
-            StatCard(title: 'Balance Cash', value: state.rs(state.cashBalance), icon: Icons.account_balance_wallet_rounded, color: Colors.teal, onTap: () => openMetric(context, DashboardMetricType.balanceCash)),
-            StatCard(title: 'Market Credit', value: state.rs(state.marketCredit), icon: Icons.store_rounded, color: Colors.orange, onTap: () => openMetric(context, DashboardMetricType.marketCredit)),
-            StatCard(title: 'Stock Value', value: state.rs(state.stockValue), icon: Icons.inventory_2_rounded, color: Colors.indigo, onTap: () => openMetric(context, DashboardMetricType.stockValue)),
-            StatCard(title: 'Profit Estimate', value: state.rs(state.monthlyProfitEstimate), icon: Icons.bar_chart_rounded, color: Colors.green, onTap: () => openMetric(context, DashboardMetricType.profitEstimate)),
+            StatCard(
+                title: 'Gross Sale',
+                value: state.rs(state.grossSale),
+                icon: Icons.trending_up_rounded,
+                color: Colors.green,
+                onTap: () =>
+                    openMetric(context, DashboardMetricType.grossSale)),
+            StatCard(
+                title: 'Cash Sale',
+                value: state.rs(state.cashSales),
+                icon: Icons.payments_rounded,
+                color: Colors.blue,
+                onTap: () => openMetric(context, DashboardMetricType.cashSale)),
+            StatCard(
+                title: 'Credit Sale',
+                value: state.rs(state.creditSales),
+                icon: Icons.credit_score_rounded,
+                color: Colors.red,
+                onTap: () =>
+                    openMetric(context, DashboardMetricType.creditSale)),
+            StatCard(
+                title: 'Recovery',
+                value: state.rs(state.totalRecovery),
+                icon: Icons.call_received_rounded,
+                color: Colors.purple,
+                onTap: () => openMetric(context, DashboardMetricType.recovery)),
+            StatCard(
+                title: 'Balance Cash',
+                value: state.rs(state.cashBalance),
+                icon: Icons.account_balance_wallet_rounded,
+                color: Colors.teal,
+                onTap: () =>
+                    openMetric(context, DashboardMetricType.balanceCash)),
+            StatCard(
+                title: 'Market Credit',
+                value: state.rs(state.marketCredit),
+                icon: Icons.store_rounded,
+                color: Colors.orange,
+                onTap: () =>
+                    openMetric(context, DashboardMetricType.marketCredit)),
+            StatCard(
+                title: 'Stock Value',
+                value: state.rs(state.stockValue),
+                icon: Icons.inventory_2_rounded,
+                color: Colors.indigo,
+                onTap: () =>
+                    openMetric(context, DashboardMetricType.stockValue)),
+            StatCard(
+                title: 'Profit Estimate',
+                value: state.rs(state.monthlyProfitEstimate),
+                icon: Icons.bar_chart_rounded,
+                color: Colors.green,
+                onTap: () =>
+                    openMetric(context, DashboardMetricType.profitEstimate)),
           ],
         ),
         const SizedBox(height: 18),
@@ -61,9 +116,19 @@ class DashboardPage extends StatelessWidget {
             title: 'Cash Flow',
             child: Column(
               children: [
-                StatusBar(title: 'Cash In', value: state.rs(state.cashSales + state.totalRecovery), percent: cashInPercent, color: Colors.green, icon: Icons.call_received_rounded),
+                StatusBar(
+                    title: 'Cash In',
+                    value: state.rs(state.cashSales + state.totalRecovery),
+                    percent: cashInPercent,
+                    color: Colors.green,
+                    icon: Icons.call_received_rounded),
                 const SizedBox(height: 18),
-                StatusBar(title: 'Cash Out', value: state.rs(state.totalExpenses + state.depositTotal), percent: cashOutPercent, color: Colors.red, icon: Icons.call_made_rounded),
+                StatusBar(
+                    title: 'Cash Out',
+                    value: state.rs(state.totalExpenses + state.depositTotal),
+                    percent: cashOutPercent,
+                    color: Colors.red,
+                    icon: Icons.call_made_rounded),
               ],
             ),
           ),
@@ -71,9 +136,21 @@ class DashboardPage extends StatelessWidget {
             title: 'Stock Health',
             child: Column(
               children: [
-                StatusBar(title: 'Healthy Stock', value: '${(stockHealth * 100).toStringAsFixed(0)}%', percent: stockHealth, color: Colors.green, icon: Icons.check_circle_rounded),
+                StatusBar(
+                    title: 'Healthy Stock',
+                    value: '${(stockHealth * 100).toStringAsFixed(0)}%',
+                    percent: stockHealth,
+                    color: Colors.green,
+                    icon: Icons.check_circle_rounded),
                 const SizedBox(height: 18),
-                StatusBar(title: 'Low Stock Items', value: state.lowStockCount.toString(), percent: state.products.isEmpty ? 0 : state.lowStockCount / state.products.length, color: Colors.orange, icon: Icons.warning_rounded),
+                StatusBar(
+                    title: 'Low Stock Items',
+                    value: state.lowStockCount.toString(),
+                    percent: state.products.isEmpty
+                        ? 0
+                        : state.lowStockCount / state.products.length,
+                    color: Colors.orange,
+                    icon: Icons.warning_rounded),
               ],
             ),
           ),
@@ -98,7 +175,8 @@ class DashboardPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xff1d4ed8), Color(0xff2563eb), Color(0xff38bdf8)]),
+        gradient: const LinearGradient(
+            colors: [Color(0xff1d4ed8), Color(0xff2563eb), Color(0xff38bdf8)]),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Wrap(
@@ -110,17 +188,30 @@ class DashboardPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Cloud DSR Sales Management', style: TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w700)),
+                const Text('Cloud DSR Sales Management',
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
-                Text(state.company?.name ?? 'Smart Account Manager', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+                Text(state.company?.name ?? 'Smart Account Manager',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900)),
                 const SizedBox(height: 8),
-                const Text('Salesman → Booker → Shopkeeper → Cash/Credit Sale → Recovery → Daily DSR Cash Report.', style: TextStyle(color: Colors.white, fontSize: 15, height: 1.5)),
+                const Text(
+                    'Salesman → Booker → Shopkeeper → Cash/Credit Sale → Recovery → Daily DSR Cash Report.',
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 15, height: 1.5)),
                 const SizedBox(height: 18),
                 Wrap(
                   spacing: 10,
                   children: [
-                    whiteButton('Book Sale', Icons.point_of_sale_rounded, () => showSaleDialog(context, state, onChanged)),
-                    whiteButton('Load Stock', Icons.move_down_rounded, () => showLoadDialog(context, state, onChanged)),
+                    whiteButton('Book Sale', Icons.point_of_sale_rounded,
+                        () => showSaleDialog(context, state, onChanged)),
+                    whiteButton('Load Stock', Icons.move_down_rounded,
+                        () => showLoadDialog(context, state, onChanged)),
                   ],
                 ),
               ],
@@ -129,13 +220,24 @@ class DashboardPage extends StatelessWidget {
           Container(
             width: 295,
             padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.16), borderRadius: BorderRadius.circular(22)),
+            decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.16),
+                borderRadius: BorderRadius.circular(22)),
             child: Column(
               children: [
-                heroLine('DSR / Bookers', state.dsrs.length.toString(), Icons.badge_rounded),
-                heroLine('Shopkeepers', state.shopkeepers.length.toString(), Icons.store_rounded),
-                heroLine('Credit Bills', state.sales.where((x) => x.type == SaleType.credit).length.toString(), Icons.receipt_long_rounded),
-                heroLine('Low Stock', state.lowStockCount.toString(), Icons.warning_rounded),
+                heroLine('DSR / Bookers', state.dsrs.length.toString(),
+                    Icons.badge_rounded),
+                heroLine('Shopkeepers', state.shopkeepers.length.toString(),
+                    Icons.store_rounded),
+                heroLine(
+                    'Credit Bills',
+                    state.sales
+                        .where((x) => x.type == SaleType.credit)
+                        .length
+                        .toString(),
+                    Icons.receipt_long_rounded),
+                heroLine('Low Stock', state.lowStockCount.toString(),
+                    Icons.warning_rounded),
               ],
             ),
           ),
@@ -149,7 +251,10 @@ class DashboardPage extends StatelessWidget {
       onPressed: onTap,
       icon: Icon(icon, size: 18),
       label: Text(text),
-      style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xff1d4ed8), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
+      style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xff1d4ed8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
     );
   }
 
@@ -160,8 +265,12 @@ class DashboardPage extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.white),
           const SizedBox(width: 12),
-          Expanded(child: Text(title, style: const TextStyle(color: Colors.white70))),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Expanded(
+              child:
+                  Text(title, style: const TextStyle(color: Colors.white70))),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -274,8 +383,12 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
     final parts = clean.split('-');
     if (parts.length == 3) {
       final year = yearController.text.trim();
-      final month = monthController.text.trim().padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
-      final day = dayController.text.trim().padLeft(dayController.text.trim().isEmpty ? 0 : 2, '0');
+      final month = monthController.text
+          .trim()
+          .padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
+      final day = dayController.text
+          .trim()
+          .padLeft(dayController.text.trim().isEmpty ? 0 : 2, '0');
 
       if (year.isNotEmpty && parts[0] != year) return false;
       if (month.isNotEmpty && parts[1] != month) return false;
@@ -317,35 +430,48 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
       case DashboardMetricType.grossSale:
         return filteredSales().fold<double>(0, (sum, item) => sum + item.total);
       case DashboardMetricType.cashSale:
-        return filteredSales(type: SaleType.cash).fold<double>(0, (sum, item) => sum + item.total);
+        return filteredSales(type: SaleType.cash)
+            .fold<double>(0, (sum, item) => sum + item.total);
       case DashboardMetricType.creditSale:
-        return filteredSales(type: SaleType.credit).fold<double>(0, (sum, item) => sum + item.total);
+        return filteredSales(type: SaleType.credit)
+            .fold<double>(0, (sum, item) => sum + item.total);
       case DashboardMetricType.recovery:
-        return filteredRecoveries().fold<double>(0, (sum, item) => sum + item.receivedAmount);
+        return filteredRecoveries()
+            .fold<double>(0, (sum, item) => sum + item.receivedAmount);
       case DashboardMetricType.balanceCash:
-        final cashSales = filteredSales(type: SaleType.cash).fold<double>(0, (sum, item) => sum + item.total);
-        final recovery = filteredRecoveries().fold<double>(0, (sum, item) => sum + item.receivedAmount);
-        final expenses = filteredExpenses().fold<double>(0, (sum, item) => sum + item.amount);
-        final deposits = filteredDeposits().fold<double>(0, (sum, item) => sum + item.total);
+        final cashSales = filteredSales(type: SaleType.cash)
+            .fold<double>(0, (sum, item) => sum + item.total);
+        final recovery = filteredRecoveries()
+            .fold<double>(0, (sum, item) => sum + item.receivedAmount);
+        final expenses = filteredExpenses()
+            .fold<double>(0, (sum, item) => sum + item.amount);
+        final deposits =
+            filteredDeposits().fold<double>(0, (sum, item) => sum + item.total);
         return cashSales + recovery - expenses - deposits;
       case DashboardMetricType.marketCredit:
-        final creditSales = filteredSales(type: SaleType.credit).fold<double>(0, (sum, item) => sum + item.total);
-        final recovery = filteredRecoveries().fold<double>(0, (sum, item) => sum + item.receivedAmount);
+        final creditSales = filteredSales(type: SaleType.credit)
+            .fold<double>(0, (sum, item) => sum + item.total);
+        final recovery = filteredRecoveries()
+            .fold<double>(0, (sum, item) => sum + item.receivedAmount);
         return creditSales - recovery;
       case DashboardMetricType.stockValue:
         return state.stockValue;
       case DashboardMetricType.profitEstimate:
         final saleProfit = filteredSales().fold<double>(0, (sum, sale) {
-          final cost = (state.productById(sale.productId)?.purchasePrice ?? 0) * sale.quantity;
+          final cost = (state.productById(sale.productId)?.purchasePrice ?? 0) *
+              sale.quantity;
           return sum + sale.total - cost;
         });
-        final expenses = filteredExpenses().fold<double>(0, (sum, item) => sum + item.amount);
-        final claims = filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
+        final expenses = filteredExpenses()
+            .fold<double>(0, (sum, item) => sum + item.amount);
+        final claims =
+            filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
         return saleProfit - expenses - claims;
     }
   }
 
-  Widget filterInput(String label, TextEditingController controller, {double width = 150, bool number = false}) {
+  Widget filterInput(String label, TextEditingController controller,
+      {double width = 150, bool number = false}) {
     return SizedBox(
       width: width,
       child: TextField(
@@ -391,7 +517,8 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
                         children: [
                           Text(
                             'Filtered Total: ${state.rs(filteredTotal)}',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 4),
                           const Text(
@@ -416,7 +543,8 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
                   filterInput('From Date', fromController, width: 160),
                   filterInput('To Date', toController, width: 160),
                   filterInput('Day', dayController, width: 100, number: true),
-                  filterInput('Month', monthController, width: 110, number: true),
+                  filterInput('Month', monthController,
+                      width: 110, number: true),
                   filterInput('Year', yearController, width: 110, number: true),
                   clearFilterButton(() {
                     setState(() {
@@ -549,7 +677,15 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
 
     return ledgerTable(
       title: 'Market Credit Ledger',
-      headers: const ['Date', 'Type', 'Shopkeeper', 'Detail', 'Credit Added', 'Paid', 'Balance Effect'],
+      headers: const [
+        'Date',
+        'Type',
+        'Shopkeeper',
+        'Detail',
+        'Credit Added',
+        'Paid',
+        'Balance Effect'
+      ],
       rows: rows.map((row) {
         final credit = row.amount >= 0;
         return [
@@ -587,15 +723,21 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
                       DataColumn(label: Text('Stock Value')),
                     ],
                     rows: state.products.map((product) {
-                      final cartons = product.packetsPerCarton <= 0 ? 0 : product.warehouseStock / product.packetsPerCarton;
-                      final value = product.warehouseStock * product.purchasePrice;
+                      final cartons = product.packetsPerCarton <= 0
+                          ? 0
+                          : product.warehouseStock / product.packetsPerCarton;
+                      final value =
+                          product.warehouseStock * product.purchasePrice;
                       return DataRow(cells: [
                         DataCell(Text(product.name)),
-                        DataCell(Text(product.brand.isEmpty ? '-' : product.brand)),
-                        DataCell(Text(product.batchNo.isEmpty ? '-' : product.batchNo)),
+                        DataCell(
+                            Text(product.brand.isEmpty ? '-' : product.brand)),
+                        DataCell(Text(
+                            product.batchNo.isEmpty ? '-' : product.batchNo)),
                         DataCell(Text(product.warehouseStock.toString())),
                         DataCell(Text(product.packetsPerCarton.toString())),
-                        DataCell(Text(cartons.toStringAsFixed(cartons == cartons.roundToDouble() ? 0 : 1))),
+                        DataCell(Text(cartons.toStringAsFixed(
+                            cartons == cartons.roundToDouble() ? 0 : 1))),
                         DataCell(Text(state.rs(product.purchasePrice))),
                         DataCell(Text(state.rs(value))),
                       ]);
@@ -606,7 +748,17 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
         const SizedBox(height: 18),
         ledgerTable(
           title: 'Purchase Stock History',
-          headers: const ['Date', 'Product', 'Batch', 'Cartons', 'Packets', 'Packet Cost', 'Total Bill', 'Paid', 'Remaining'],
+          headers: const [
+            'Date',
+            'Product',
+            'Batch',
+            'Cartons',
+            'Packets',
+            'Packet Cost',
+            'Total Bill',
+            'Paid',
+            'Remaining'
+          ],
           rows: purchases.map((purchase) {
             return [
               formatDateForUi(purchase.date),
@@ -632,7 +784,15 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
       children: [
         ledgerTable(
           title: 'Sale Profit History',
-          headers: const ['Date', 'Bill No', 'Product', 'Qty', 'Sale Total', 'Cost', 'Profit'],
+          headers: const [
+            'Date',
+            'Bill No',
+            'Product',
+            'Qty',
+            'Sale Total',
+            'Cost',
+            'Profit'
+          ],
           rows: sales.map((sale) {
             final product = state.productById(sale.productId);
             final cost = (product?.purchasePrice ?? 0) * sale.quantity;
@@ -682,8 +842,14 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
           ? emptyBox('No history found for selected filters.')
           : horizontalTable(
               DataTable(
-                columns: headers.map((header) => DataColumn(label: Text(header))).toList(),
-                rows: rows.map((row) => DataRow(cells: row.map((cell) => DataCell(Text(cell))).toList())).toList(),
+                columns: headers
+                    .map((header) => DataColumn(label: Text(header)))
+                    .toList(),
+                rows: rows
+                    .map((row) => DataRow(
+                        cells:
+                            row.map((cell) => DataCell(Text(cell))).toList()))
+                    .toList(),
               ),
             ),
     );
@@ -727,11 +893,13 @@ class SetupCompanyPage extends StatelessWidget {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Create your company profile first. This links your login user with one company in Supabase.'),
+                const Text(
+                    'Create your company profile first. This links your login user with one company in Supabase.'),
                 textInput(label: 'Company Name', controller: companyController),
                 textInput(label: 'Your Name', controller: nameController),
                 const SizedBox(height: 14),
-                primaryButton('Create Company Profile', Icons.business_rounded, () async {
+                primaryButton('Create Company Profile', Icons.business_rounded,
+                    () async {
                   await runAction(
                     context,
                     () => state.service.createCompanyAndProfile(
@@ -746,7 +914,9 @@ class SetupCompanyPage extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Company: ${state.company?.name ?? '-'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                Text('Company: ${state.company?.name ?? '-'}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w900)),
                 Text('Role: ${state.profile?.role ?? '-'}'),
                 const SizedBox(height: 12),
                 const Text(
@@ -785,8 +955,12 @@ class DsrPage extends StatelessWidget {
           DataColumn(label: Text('Actions')),
         ],
         rows: state.dsrs.map((x) {
-          final loaded = state.dsrStocks.where((s) => s.dsrId == x.id).fold(0, (sum, s) => sum + s.quantity);
-          final sale = state.sales.where((s) => s.dsrId == x.id).fold(0.0, (sum, s) => sum + s.total);
+          final loaded = state.dsrStocks
+              .where((s) => s.dsrId == x.id)
+              .fold(0, (sum, s) => sum + s.quantity);
+          final sale = state.sales
+              .where((s) => s.dsrId == x.id)
+              .fold(0.0, (sum, s) => sum + s.total);
           return DataRow(cells: [
             DataCell(Text(x.name)),
             DataCell(Text(x.phone)),
@@ -796,14 +970,16 @@ class DsrPage extends StatelessWidget {
             DataCell(Text(loaded.toString())),
             DataCell(Text(state.rs(sale))),
             DataCell(actionButtons(
-              onEdit: () => showDsrDialog(context, state, onChanged, editItem: x),
+              onEdit: () =>
+                  showDsrDialog(context, state, onChanged, editItem: x),
               onDelete: () => confirmDelete(
                 context: context,
                 title: 'Delete DSR',
-                message: 'Are you sure you want to delete this DSR? This is only allowed when no shops or sales are linked.',
+                message:
+                    'Are you sure you want to delete this DSR? This is only allowed when no shops or sales are linked.',
                 action: () => state.service.deleteDsr(x.id),
                 onChanged: onChanged,
-                ),
+              ),
             )),
           ]);
         }).toList(),
@@ -811,9 +987,6 @@ class DsrPage extends StatelessWidget {
     );
   }
 }
-
-
-
 
 class SupplierPage extends StatelessWidget {
   final AppState state;
@@ -900,7 +1073,8 @@ class SupplierPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return tablePage(
       title: 'Salesmen',
-      subtitle: 'Salesman provides/delivers goods. Linked DSR names are shown before delete.',
+      subtitle:
+          'Salesman provides/delivers goods. Linked DSR names are shown before delete.',
       buttonText: 'Add Salesman',
       icon: Icons.local_shipping_rounded,
       onTap: () => showSupplierDialog(context, state, onChanged),
@@ -928,7 +1102,8 @@ class SupplierPage extends StatelessWidget {
               SizedBox(
                 width: 96,
                 child: actionButtons(
-                  onEdit: () => showSupplierDialog(context, state, onChanged, editItem: x),
+                  onEdit: () => showSupplierDialog(context, state, onChanged,
+                      editItem: x),
                   onDelete: () {
                     confirmDelete(
                       context: context,
@@ -954,7 +1129,8 @@ class ShopkeeperPage extends StatelessWidget {
   final AppState state;
   final Future<void> Function() onChanged;
 
-  const ShopkeeperPage({super.key, required this.state, required this.onChanged});
+  const ShopkeeperPage(
+      {super.key, required this.state, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -983,14 +1159,16 @@ class ShopkeeperPage extends StatelessWidget {
             DataCell(Text(state.dsrName(x.dsrId))),
             DataCell(Text(state.rs(x.pendingCredit))),
             DataCell(actionButtons(
-              onEdit: () => showShopDialog(context, state, onChanged, editItem: x),
+              onEdit: () =>
+                  showShopDialog(context, state, onChanged, editItem: x),
               onDelete: () => confirmDelete(
                 context: context,
                 title: 'Delete Shopkeeper',
-                message: 'Are you sure you want to delete this shopkeeper? This is only allowed when no sales or recoveries are linked.',
+                message:
+                    'Are you sure you want to delete this shopkeeper? This is only allowed when no sales or recoveries are linked.',
                 action: () => state.service.deleteShopkeeper(x.id),
                 onChanged: onChanged,
-                ),
+              ),
             )),
           ]);
         }).toList(),
@@ -999,25 +1177,1102 @@ class ShopkeeperPage extends StatelessWidget {
   }
 }
 
-class ProductPage extends StatelessWidget {
+class ProductPage extends StatefulWidget {
   final AppState state;
   final Future<void> Function() onChanged;
 
   const ProductPage({super.key, required this.state, required this.onChanged});
 
   @override
+  State<ProductPage> createState() => _ProductPageState();
+}
+
+class _ProductPageState extends State<ProductPage> {
+  final Map<String, TextEditingController> nameControllers = {};
+  final Map<String, TextEditingController> brandControllers = {};
+  final Map<String, TextEditingController> skuCodeControllers = {};
+  final Map<String, TextEditingController> unitControllers = {};
+  final Map<String, TextEditingController> cartonControllers = {};
+  final Map<String, TextEditingController> packControllers = {};
+  final Map<String, TextEditingController> minStockControllers = {};
+  final Map<String, TextEditingController> packetBuyControllers = {};
+  final Map<String, TextEditingController> packetSellControllers = {};
+  final remarksController = TextEditingController();
+  final ScrollController skuHorizontalController = ScrollController();
+  final List<_PrimarySkuDraftRow> draftSkuRows = [];
+
+  String distributorType = 'All Selected';
+  String distributor = 'AFRA TRADERS - GIGGLY RANGE B - KHI - 123456 [ D099 ]';
+  String manufacturer = 'VOLKA FOOD INTERNATIONAL LTD.';
+
+  AppState get state => widget.state;
+
+  @override
+  void initState() {
+    super.initState();
+    draftSkuRows.add(_PrimarySkuDraftRow());
+  }
+
+  @override
+  void dispose() {
+    for (final controller in [
+      ...nameControllers.values,
+      ...brandControllers.values,
+      ...skuCodeControllers.values,
+      ...unitControllers.values,
+      ...cartonControllers.values,
+      ...packControllers.values,
+      ...minStockControllers.values,
+      ...packetBuyControllers.values,
+      ...packetSellControllers.values,
+    ]) {
+      controller.dispose();
+    }
+    for (final row in draftSkuRows) {
+      row.dispose();
+    }
+    skuHorizontalController.dispose();
+    remarksController.dispose();
+    super.dispose();
+  }
+
+  TextEditingController _controllerFor(
+    Map<String, TextEditingController> map,
+    Product product,
+    String initial,
+  ) {
+    return map.putIfAbsent(
+        product.id, () => TextEditingController(text: initial));
+  }
+
+  TextEditingController nameControllerFor(Product product) =>
+      _controllerFor(nameControllers, product, product.name);
+  TextEditingController brandControllerFor(Product product) =>
+      _controllerFor(brandControllers, product, product.brand);
+  TextEditingController skuCodeControllerFor(Product product) =>
+      _controllerFor(skuCodeControllers, product, product.sku);
+  TextEditingController unitControllerFor(Product product) =>
+      _controllerFor(unitControllers, product, '0');
+  TextEditingController cartonControllerFor(Product product) =>
+      _controllerFor(cartonControllers, product, '0');
+  TextEditingController packControllerFor(Product product) => _controllerFor(
+      packControllers,
+      product,
+      product.packetsPerCarton <= 0
+          ? '1'
+          : product.packetsPerCarton.toString());
+  TextEditingController minStockControllerFor(Product product) =>
+      _controllerFor(
+          minStockControllers, product, product.lowStockLimit.toString());
+  TextEditingController packetBuyControllerFor(Product product) =>
+      _controllerFor(
+          packetBuyControllers,
+          product,
+          product.purchasePrice.toStringAsFixed(
+              product.purchasePrice == product.purchasePrice.roundToDouble()
+                  ? 0
+                  : 2));
+  TextEditingController packetSellControllerFor(Product product) =>
+      _controllerFor(
+          packetSellControllers,
+          product,
+          product.sellingPrice.toStringAsFixed(
+              product.sellingPrice == product.sellingPrice.roundToDouble()
+                  ? 0
+                  : 2));
+
+  int unitsFor(Product product) => toInt(unitControllerFor(product).text);
+  int cartonsFor(Product product) => toInt(cartonControllerFor(product).text);
+  int packFor(Product product) => toInt(packControllerFor(product).text) <= 0
+      ? 1
+      : toInt(packControllerFor(product).text);
+
+  int totalUnitsFor(Product product) {
+    return (cartonsFor(product) * packFor(product)) + unitsFor(product);
+  }
+
+  double totalAmountFor(Product product) {
+    return totalUnitsFor(product) *
+        toDouble(packetSellControllerFor(product).text);
+  }
+
+  int get totalCartons {
+    return draftSkuRows.fold<int>(
+        0, (sum, row) => sum + toInt(row.cartonsController.text));
+  }
+
+  int get totalUnits {
+    return draftSkuRows.fold<int>(
+        0, (sum, row) => sum + totalUnitsForDraft(row));
+  }
+
+  double get totalAmount {
+    return draftSkuRows.fold<double>(
+        0, (sum, row) => sum + totalAmountForDraft(row));
+  }
+
+  int totalUnitsForDraft(_PrimarySkuDraftRow row) {
+    final pack = toInt(row.packController.text) <= 0
+        ? 1
+        : toInt(row.packController.text);
+    return (toInt(row.cartonsController.text) * pack) +
+        toInt(row.unitsController.text);
+  }
+
+  double grossAmountForDraft(_PrimarySkuDraftRow row) {
+    return totalUnitsForDraft(row) * toDouble(row.packetBuyController.text);
+  }
+
+  double discountAmountForDraft(_PrimarySkuDraftRow row) {
+    final gross = grossAmountForDraft(row);
+    final companyPercent =
+        toDouble(row.companyDiscountController.text).clamp(0, 100).toDouble();
+    final tradePercent =
+        toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
+    return gross * ((companyPercent + tradePercent) / 100);
+  }
+
+  double totalAmountForDraft(_PrimarySkuDraftRow row) {
+    return (grossAmountForDraft(row) - discountAmountForDraft(row))
+        .clamp(0, double.infinity)
+        .toDouble();
+  }
+
+  Product? productForDraft(_PrimarySkuDraftRow row) {
+    if (row.selectedProductId.isNotEmpty) {
+      final found = state.products
+          .where((product) => product.id == row.selectedProductId)
+          .toList();
+      if (found.isNotEmpty) return found.first;
+    }
+
+    final query = row.skuController.text.trim().toLowerCase();
+    if (query.isEmpty) return null;
+    final exact = state.products.where((product) {
+      return product.name.toLowerCase() == query ||
+          product.sku.toLowerCase() == query;
+    }).toList();
+    return exact.isEmpty ? null : exact.first;
+  }
+
+  int alreadyOrderedQty(Product product) {
+    return state.sales
+        .where((sale) => sale.productId == product.id)
+        .fold<int>(0, (sum, sale) => sum + sale.quantity);
+  }
+
+  Future<void> attachDepositSlip() async {
+    final upload = html.FileUploadInputElement()
+      ..accept = 'image/*,.pdf'
+      ..click();
+
+    upload.onChange.listen((event) {
+      final file =
+          upload.files?.isNotEmpty == true ? upload.files!.first : null;
+      if (file != null && mounted) {
+        showSnack(context, 'Attached deposit slip: ${file.name}');
+      }
+    });
+  }
+
+  Future<void> generateOrder() async {
+    final rowsToSave = draftSkuRows
+        .where((row) => row.skuController.text.trim().isNotEmpty)
+        .toList();
+
+    if (rowsToSave.isEmpty) {
+      showSnack(context, 'Type or search SKU/product first.');
+      return;
+    }
+
+    final rowsWithQty =
+        rowsToSave.where((row) => totalUnitsForDraft(row) > 0).toList();
+    if (rowsWithQty.isEmpty) {
+      showSnack(context, 'Enter quantity in cartons or units first.');
+      return;
+    }
+
+    final generatedUnits = totalUnits;
+    final generatedAmount = totalAmount;
+    final invoiceNo = 'PR-${DateTime.now().millisecondsSinceEpoch}';
+
+    await runAction(
+      context,
+      () async {
+        for (final row in rowsWithQty) {
+          final pack = toInt(row.packController.text) <= 0
+              ? 1
+              : toInt(row.packController.text);
+          final cartons = toInt(row.cartonsController.text);
+          final units = toInt(row.unitsController.text);
+          final buyPrice = toDouble(row.packetBuyController.text);
+          final sellPrice = toDouble(row.packetSellController.text) <= 0
+              ? buyPrice
+              : toDouble(row.packetSellController.text);
+          final companyPercent = toDouble(row.companyDiscountController.text)
+              .clamp(0, 100)
+              .toDouble();
+          final tradePercent =
+              toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
+          final discountAmount = discountAmountForDraft(row);
+          Product? existingProduct = productForDraft(row);
+          String productId = existingProduct?.id ?? '';
+
+          if (existingProduct == null) {
+            productId = await state.service.addProductReturningId(
+              companyId: state.companyId,
+              name: row.skuController.text.trim(),
+              sku: row.skuCodeController.text.trim().isEmpty
+                  ? 'SKU-${DateTime.now().millisecondsSinceEpoch}'
+                  : row.skuCodeController.text.trim(),
+              category: 'Primary Receiving',
+              brand: row.brandController.text.trim(),
+              batchNo: '',
+              mfgDate: '',
+              expDate: '',
+              purchasePrice: buyPrice,
+              sellingPrice: sellPrice,
+              warehouseStock: 0,
+              lowStockLimit: toInt(row.minStockController.text),
+              packetsPerCarton: pack,
+              companyDiscount: companyPercent,
+              tradeDiscount: tradePercent,
+            );
+          } else {
+            await state.service.updateProduct(
+              id: existingProduct.id,
+              name: row.skuController.text.trim().isEmpty
+                  ? existingProduct.name
+                  : row.skuController.text.trim(),
+              sku: row.skuCodeController.text.trim(),
+              category: existingProduct.category,
+              brand: row.brandController.text.trim(),
+              batchNo: existingProduct.batchNo,
+              mfgDate: existingProduct.mfgDate,
+              expDate: existingProduct.expDate,
+              purchasePrice: buyPrice,
+              sellingPrice: sellPrice,
+              warehouseStock: existingProduct.warehouseStock,
+              lowStockLimit: toInt(row.minStockController.text),
+              packetsPerCarton: pack,
+              companyDiscount: companyPercent,
+              tradeDiscount: tradePercent,
+            );
+          }
+
+          await state.service.addCompanyPurchase(
+            companyId: state.companyId,
+            invoiceNo: invoiceNo,
+            companyName: manufacturer,
+            productId: productId,
+            batchNo: row.skuCodeController.text.trim(),
+            cartons: cartons,
+            packetsPerCarton: pack,
+            packetPurchasePrice: buyPrice,
+            companyDiscount: discountAmount,
+            paidAmount: 0,
+            note:
+                'Primary Receiving • Company ${companyPercent.toStringAsFixed(2)}% • Trade Offer ${tradePercent.toStringAsFixed(2)}% • ${remarksController.text.trim()}',
+            extraUnits: units,
+          );
+        }
+      },
+      widget.onChanged,
+    );
+
+    for (final row in draftSkuRows) {
+      row.dispose();
+    }
+    draftSkuRows
+      ..clear()
+      ..add(_PrimarySkuDraftRow());
+    remarksController.clear();
+
+    if (mounted) {
+      setState(() {});
+      showSnack(context,
+          'Primary receiving saved to stock and company ledger: $generatedUnits units • ${state.rs(generatedAmount)}');
+    }
+  }
+
+  void addFreshSkuRow() {
+    setState(() {
+      draftSkuRows.add(_PrimarySkuDraftRow());
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        moduleHeader(
+        DataCard(
           title: 'Primary Receiving',
-          subtitle: 'Add and manage primary receiving product details, prices, cartons, packets, and low stock limit.',
-          buttonText: 'Add Receiving Product',
-          icon: Icons.add_box_rounded,
-          onTap: () => showProductDialog(context, state, onChanged),
+          child: const Text(
+            'Add same or new company SKUs directly in the receiving sheet. When you generate the order, existing product stock updates and new SKUs are saved.',
+            style: TextStyle(color: Color(0xff6b7280), height: 1.5),
+          ),
+        ),
+        const SizedBox(height: 18),
+        primaryReceivingOrderCard(),
+        const SizedBox(height: 18),
+        const SizedBox(height: 90),
+      ],
+    );
+  }
+
+  Widget primaryReceivingOrderCard() {
+    return DataCard(
+      title: 'Primary Orders',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 980;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _orderTopControls(isCompact: isCompact),
+              const SizedBox(height: 28),
+              Text(
+                'SKUs',
+                style: TextStyle(
+                  fontSize: isCompact ? 24 : 30,
+                  fontWeight: FontWeight.w300,
+                  color: AppTheme.dark,
+                  letterSpacing: -0.6,
+                ),
+              ),
+              const SizedBox(height: 14),
+              state.products.isEmpty && draftSkuRows.isEmpty
+                  ? emptyBox(
+                      'No SKU rows yet. Tap Add New Row to create a fresh empty SKU line.')
+                  : _responsiveSkuTable(constraints.maxWidth),
+              const SizedBox(height: 14),
+              _orderFooter(isCompact: isCompact),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _orderTopControls({required bool isCompact}) {
+    final controlWidth = isCompact ? double.infinity : 520.0;
+    const distributorTypes = [
+      'All Selected',
+      'Selected Distributor',
+      'Range Wise'
+    ];
+    const distributors = [
+      'AFRA TRADERS - GIGGLY RANGE B - KHI - 123456 [ D099 ]',
+      'AFRA TRADER',
+    ];
+    const manufacturers = [
+      'VOLKA FOOD INTERNATIONAL LTD.',
+      'CADBURY NEW',
+      'GIGGLY',
+    ];
+
+    String safeValue(String current, List<String> options) {
+      return options.contains(current) ? current : options.first;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _selectLine(
+          label: 'Select Distributor Type :',
+          width: controlWidth,
+          child: _safePrimaryDropdown(
+            value: safeValue(distributorType, distributorTypes),
+            options: distributorTypes,
+            onChanged: (value) => setState(() => distributorType = value),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _selectLine(
+          label: 'Select Distributor :',
+          width: controlWidth,
+          child: _safePrimaryDropdown(
+            value: safeValue(distributor, distributors),
+            options: distributors,
+            onChanged: (value) => setState(() => distributor = value),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _selectLine(
+          label: 'Select Manufacturer :',
+          width: controlWidth,
+          child: _safePrimaryDropdown(
+            value: safeValue(manufacturer, manufacturers),
+            options: manufacturers,
+            onChanged: (value) => setState(() => manufacturer = value),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _safePrimaryDropdown({
+    required String value,
+    required List<String> options,
+    required ValueChanged<String> onChanged,
+  }) {
+    final uniqueOptions = options.toSet().toList();
+
+    return DropdownButtonFormField<String>(
+      value: uniqueOptions.contains(value) ? value : uniqueOptions.first,
+      isExpanded: true,
+      decoration: const InputDecoration(isDense: true),
+      items: uniqueOptions.map((option) {
+        return DropdownMenuItem<String>(
+          value: option,
+          child: Text(option, maxLines: 1, overflow: TextOverflow.ellipsis),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) onChanged(value);
+      },
+    );
+  }
+
+  Widget _selectLine(
+      {required String label, required double width, required Widget child}) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SizedBox(
+          width: 210,
+          child: Text(label,
+              style: const TextStyle(
+                  color: Color(0xff6b7280), fontWeight: FontWeight.w600)),
+        ),
+        SizedBox(width: width, child: child),
+      ],
+    );
+  }
+
+  Widget _responsiveSkuTable(double availableWidth) {
+    // The real row width is 1376px. We keep the table at this exact width
+    // and let the horizontal scroll view handle smaller spaces. This prevents
+    // yellow RenderFlex overflow when the sidebar opens or closes.
+    const tableWidth = 1376.0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffe5e7eb)),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Scrollbar(
+          controller: skuHorizontalController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          thickness: 8,
+          radius: const Radius.circular(99),
+          child: SingleChildScrollView(
+            controller: skuHorizontalController,
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: SizedBox(
+              width: tableWidth,
+              child: _skuTable(tableWidth),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _skuTable(double tableWidth) {
+    final draftRows = draftSkuRows.asMap().entries.map((entry) {
+      return _draftSkuTableRow(
+        index: entry.key + 1,
+        row: entry.value,
+        tableWidth: tableWidth,
+      );
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _skuHeaderRow(tableWidth),
+        ...draftRows,
+        _addNewRow(tableWidth),
+        _totalRow(tableWidth),
+      ],
+    );
+  }
+
+  List<double> _columnWidths(double tableWidth) {
+    // Sum = 1376. This exactly matches the table SizedBox width above.
+    return const <double>[
+      38,
+      250,
+      86,
+      86,
+      68,
+      72,
+      76,
+      76,
+      72,
+      72,
+      72,
+      76,
+      76,
+      78,
+      86,
+      92
+    ];
+  }
+
+  Widget _skuHeaderRow(double tableWidth) {
+    final widths = _columnWidths(tableWidth);
+    final labels = [
+      'S#',
+      'SKU',
+      'Brand\nName',
+      'SKU\nCode',
+      'Qty\nCTN',
+      'Qty\nUnits',
+      'Available\nQuantity',
+      'Already\nOrdered',
+      'Current\nTarget',
+      'Next\nTarget',
+      'Min\nStock',
+      'Excl\nGST',
+      'Incl\nGST',
+      'Company\n%',
+      'Trade\nOffer',
+      'Total Price',
+    ];
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xfff8fafc),
+        border:
+            Border(bottom: BorderSide(color: Color(0xffdbeafe), width: 1.2)),
+      ),
+      child: Row(
+        children: List.generate(labels.length, (index) {
+          return _skuCell(
+            widths[index],
+            labels[index],
+            isHeader: true,
+            align: TextAlign.center,
+            height: 70,
+          );
+        }),
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _skuTableRow(
+      {required int index,
+      required Product product,
+      required double tableWidth}) {
+    final widths = _columnWidths(tableWidth);
+    final ordered = alreadyOrderedQty(product);
+    final currentTarget = toInt(minStockControllerFor(product).text);
+    final nextTarget = currentTarget * 2;
+    final total = totalAmountFor(product);
+
+    return Row(
+      children: [
+        _skuCell(widths[0], index.toString(), align: TextAlign.center),
+        _textInputCell(widths[1], nameControllerFor(product),
+            hint: 'SKU / product name'),
+        _textInputCell(widths[2], brandControllerFor(product), hint: 'Brand'),
+        _textInputCell(widths[3], skuCodeControllerFor(product), hint: 'Code'),
+        _inputCell(widths[4], cartonControllerFor(product)),
+        _inputCell(widths[5], unitControllerFor(product)),
+        _skuCell(widths[6], product.warehouseStock.toString(),
+            align: TextAlign.center),
+        _skuCell(widths[7], ordered.toString(), align: TextAlign.center),
+        _skuCell(widths[8], currentTarget.toString(), align: TextAlign.center),
+        _skuCell(widths[9], nextTarget.toString(), align: TextAlign.center),
+        _textInputCell(widths[10], minStockControllerFor(product),
+            hint: '0', number: true, align: TextAlign.center),
+        _textInputCell(widths[11], packetBuyControllerFor(product),
+            hint: '0', number: true, align: TextAlign.right),
+        _textInputCell(widths[12], packetSellControllerFor(product),
+            hint: '0', number: true, align: TextAlign.right),
+        _skuCell(widths[13], state.rs(total), align: TextAlign.right),
+      ],
+    );
+  }
+
+  Widget _draftSkuTableRow(
+      {required int index,
+      required _PrimarySkuDraftRow row,
+      required double tableWidth}) {
+    final widths = _columnWidths(tableWidth);
+    final matchedProduct = productForDraft(row);
+    final ordered =
+        matchedProduct == null ? 0 : alreadyOrderedQty(matchedProduct);
+    final available = matchedProduct?.warehouseStock ?? 0;
+    final minStock = toInt(row.minStockController.text);
+    final total = totalAmountForDraft(row);
+
+    return Row(
+      children: [
+        _skuCell(widths[0], index.toString(), align: TextAlign.center),
+        _skuSearchCell(widths[1], row),
+        _textInputCell(widths[2], row.brandController, hint: 'Brand'),
+        _textInputCell(widths[3], row.skuCodeController, hint: 'Code'),
+        _inputCell(widths[4], row.cartonsController),
+        _inputCell(widths[5], row.unitsController),
+        _skuCell(widths[6], available.toString(), align: TextAlign.center),
+        _skuCell(widths[7], ordered.toString(), align: TextAlign.center),
+        _skuCell(widths[8], minStock.toString(), align: TextAlign.center),
+        _skuCell(widths[9], (minStock * 2).toString(), align: TextAlign.center),
+        _textInputCell(widths[10], row.minStockController,
+            hint: '0', number: true, align: TextAlign.center),
+        _textInputCell(widths[11], row.packetBuyController,
+            hint: '0', number: true, align: TextAlign.right),
+        _textInputCell(widths[12], row.packetSellController,
+            hint: '0', number: true, align: TextAlign.right),
+        _textInputCell(widths[13], row.companyDiscountController,
+            hint: '0%', number: true, align: TextAlign.center),
+        _textInputCell(widths[14], row.tradeOfferController,
+            hint: '0%', number: true, align: TextAlign.center),
+        _skuCell(widths[15], state.rs(total), align: TextAlign.right),
+      ],
+    );
+  }
+
+  Widget _skuSearchCell(double width, _PrimarySkuDraftRow row) {
+    return Container(
+      width: width,
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffe5e7eb), width: 0.65)),
+      child: Autocomplete<Product>(
+        displayStringForOption: (product) => product.name,
+        optionsBuilder: (TextEditingValue value) {
+          final query = value.text.trim().toLowerCase();
+          if (query.isEmpty) return const Iterable<Product>.empty();
+          return state.products.where((product) {
+            return product.name.toLowerCase().contains(query) ||
+                product.sku.toLowerCase().contains(query) ||
+                product.brand.toLowerCase().contains(query);
+          }).take(8);
+        },
+        onSelected: (product) {
+          setState(() {
+            row.selectedProductId = product.id;
+            row.skuController.text = product.name;
+            row.brandController.text = product.brand;
+            row.skuCodeController.text = product.sku;
+            row.packController.text = product.packetsPerCarton <= 0
+                ? '1'
+                : product.packetsPerCarton.toString();
+            row.packetBuyController.text = product.purchasePrice
+                .toStringAsFixed(product.purchasePrice ==
+                        product.purchasePrice.roundToDouble()
+                    ? 0
+                    : 2);
+            row.packetSellController.text = product.sellingPrice
+                .toStringAsFixed(
+                    product.sellingPrice == product.sellingPrice.roundToDouble()
+                        ? 0
+                        : 2);
+            row.companyDiscountController.text =
+                product.companyDiscount.toStringAsFixed(
+              product.companyDiscount == product.companyDiscount.roundToDouble()
+                  ? 0
+                  : 2,
+            );
+            row.tradeOfferController.text = product.tradeDiscount
+                .toStringAsFixed(product.tradeDiscount ==
+                        product.tradeDiscount.roundToDouble()
+                    ? 0
+                    : 2);
+            row.minStockController.text = product.lowStockLimit.toString();
+            row.companyDiscountController.text = product.companyDiscount
+                .toStringAsFixed(product.companyDiscount ==
+                        product.companyDiscount.roundToDouble()
+                    ? 0
+                    : 2);
+            row.tradeOfferController.text = product.tradeDiscount
+                .toStringAsFixed(product.tradeDiscount ==
+                        product.tradeDiscount.roundToDouble()
+                    ? 0
+                    : 2);
+          });
+        },
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          if (controller.text != row.skuController.text) {
+            controller.value = row.skuController.value;
+          }
+          controller.addListener(() {
+            if (row.skuController.text != controller.text) {
+              row.skuController.text = controller.text;
+              row.selectedProductId = '';
+            }
+          });
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            style: const TextStyle(fontSize: 12),
+            decoration: InputDecoration(
+              hintText: 'Search or type SKU',
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+            ),
+            onChanged: (_) => setState(() {}),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(10),
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxHeight: 260, maxWidth: 360),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final product = options.elementAt(index);
+                    return ListTile(
+                      dense: true,
+                      title: Text(product.name,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(
+                          '${product.brand} • ${product.sku} • Stock ${product.warehouseStock}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      onTap: () => onSelected(product),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _addNewRow(double tableWidth) {
+    return InkWell(
+      onTap: addFreshSkuRow,
+      child: Container(
+        height: 34,
+        decoration: const BoxDecoration(
+          color: Color(0xfff8fafc),
+          border: Border(
+            left: BorderSide(color: Color(0xffe5e7eb)),
+            right: BorderSide(color: Color(0xffe5e7eb)),
+            bottom: BorderSide(color: Color(0xffe5e7eb)),
+          ),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(width: 10),
+            Icon(Icons.add_box_rounded, size: 16, color: Color(0xff64748b)),
+            SizedBox(width: 6),
+            Text('Add New Row',
+                style: TextStyle(
+                    color: Color(0xff334155), fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _totalRow(double tableWidth) {
+    final widths = _columnWidths(tableWidth);
+    return Row(
+      children: [
+        _skuCell(widths[0] + widths[1] + widths[2] + widths[3], 'Total',
+            align: TextAlign.right, isTotal: true),
+        _skuCell(widths[4], totalCartons.toString(),
+            align: TextAlign.center, isTotal: true),
+        _skuCell(widths[5], totalUnits.toString(),
+            align: TextAlign.center, isTotal: true),
+        _skuCell(
+            widths.sublist(6, 15).fold<double>(0, (sum, item) => sum + item),
+            '',
+            isTotal: true),
+        _skuCell(widths[15], state.rs(totalAmount),
+            align: TextAlign.right, isTotal: true),
+      ],
+    );
+  }
+
+  Widget _skuCell(
+    double width,
+    String text, {
+    bool isHeader = false,
+    bool isTotal = false,
+    TextAlign align = TextAlign.left,
+    double height = 44,
+  }) {
+    final bg = isHeader
+        ? const Color(0xfff8fafc)
+        : isTotal
+            ? const Color(0xfff8fafc)
+            : Colors.white;
+    final textColor = isHeader ? AppTheme.primary : AppTheme.dark;
+
+    return Container(
+      width: width,
+      height: height,
+      padding: EdgeInsets.symmetric(
+          horizontal: isHeader ? 8 : 6, vertical: isHeader ? 10 : 6),
+      alignment: _alignmentFor(align),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border.all(
+            color: isHeader ? const Color(0xffdbeafe) : const Color(0xffe5e7eb),
+            width: 0.65),
+      ),
+      child: Text(
+        text,
+        maxLines: isHeader ? 3 : 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: align,
+        style: TextStyle(
+          color: textColor,
+          fontSize: isHeader ? 10.5 : 12,
+          fontWeight: isHeader || isTotal ? FontWeight.w800 : FontWeight.w500,
+          height: isHeader ? 1.25 : 1.15,
+        ),
+      ),
+    );
+  }
+
+  Widget _inputCell(double width, TextEditingController controller) {
+    return _textInputCell(width, controller,
+        hint: '0', number: true, align: TextAlign.center);
+  }
+
+  Widget _textInputCell(
+    double width,
+    TextEditingController controller, {
+    String hint = '',
+    bool number = false,
+    TextAlign align = TextAlign.left,
+  }) {
+    return Container(
+      width: width,
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffe5e7eb), width: 0.65)),
+      child: TextField(
+        controller: controller,
+        keyboardType: number ? TextInputType.number : TextInputType.text,
+        textAlign: align,
+        style: const TextStyle(fontSize: 12),
+        decoration: InputDecoration(
+          hintText: hint,
+          isDense: true,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
+  }
+
+  Alignment _alignmentFor(TextAlign align) {
+    switch (align) {
+      case TextAlign.center:
+        return Alignment.center;
+      case TextAlign.right:
+      case TextAlign.end:
+        return Alignment.centerRight;
+      default:
+        return Alignment.centerLeft;
+    }
+  }
+
+  Widget _orderFooter({required bool isCompact}) {
+    final now = DateTime.now();
+    final dateText =
+        '${_monthName(now.month)} ${now.day}, ${now.year} at ${_formatTime(now)}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(thickness: 3, color: Color(0xffcbd5e1)),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 22,
+          runSpacing: 16,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            SizedBox(
+              width: isCompact ? double.infinity : 430,
+              child: TextField(
+                controller: remarksController,
+                minLines: 2,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Remarks',
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: attachDepositSlip,
+              icon: const Icon(Icons.attach_file_rounded),
+              label: const Text('Attach Deposit Slip'),
+              style: OutlinedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 17),
+                side: const BorderSide(color: Colors.transparent),
+              ),
+            ),
+            SizedBox(
+              width: isCompact ? double.infinity : 250,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: generateOrder,
+                icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                label: const Text('Generate Order'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(3)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        Wrap(
+          spacing: 70,
+          runSpacing: 8,
+          children: [
+            _auditText('Order Added On :', dateText),
+            _auditText(
+                'Order Added By :', state.profile?.fullName ?? 'afratraders'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _auditText(String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+            width: 150,
+            child: Text(label,
+                style: const TextStyle(
+                    color: Color(0xff6b7280), fontWeight: FontWeight.w600))),
+        Text(value,
+            style: const TextStyle(
+                color: AppTheme.dark, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+
+  String _monthName(int month) {
+    const names = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'June',
+      'July',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return names[(month - 1).clamp(0, 11)];
+  }
+
+  String _formatTime(DateTime date) {
+    final hour =
+        date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = date.hour >= 12 ? 'pm' : 'am';
+    return '$hour:$minute $period';
+  }
+}
+
+class _PrimarySkuDraftRow {
+  String selectedProductId = '';
+  final skuController = TextEditingController();
+  final brandController = TextEditingController();
+  final skuCodeController = TextEditingController();
+  final cartonsController = TextEditingController(text: '0');
+  final unitsController = TextEditingController(text: '0');
+  final returnCartonsController = TextEditingController(text: '0');
+  final returnUnitsController = TextEditingController(text: '0');
+  final packController = TextEditingController(text: '24');
+  final packetBuyController = TextEditingController(text: '0');
+  final packetSellController = TextEditingController(text: '0');
+  final companyDiscountController = TextEditingController(text: '0');
+  final tradeOfferController = TextEditingController(text: '0');
+  final minStockController = TextEditingController(text: '0');
+
+  void dispose() {
+    skuController.dispose();
+    brandController.dispose();
+    skuCodeController.dispose();
+    cartonsController.dispose();
+    unitsController.dispose();
+    returnCartonsController.dispose();
+    returnUnitsController.dispose();
+    packController.dispose();
+    packetBuyController.dispose();
+    packetSellController.dispose();
+    companyDiscountController.dispose();
+    tradeOfferController.dispose();
+    minStockController.dispose();
+  }
+}
+
+class AllProductsPage extends StatelessWidget {
+  final AppState state;
+  final Future<void> Function() onChanged;
+
+  const AllProductsPage(
+      {super.key, required this.state, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DataCard(
+          title: 'All Products & Orders',
+          child: const Text(
+            'View all saved products, primary stock, and sales/order history from one place.',
+            style: TextStyle(color: Color(0xff6b7280), height: 1.5),
+          ),
         ),
         const SizedBox(height: 18),
         productTable(state, context: context, onChanged: onChanged),
+        const SizedBox(height: 18),
+        salesTable(state),
+        const SizedBox(height: 18),
+        companyPurchaseTable(state, context: context),
       ],
     );
   }
@@ -1035,7 +2290,8 @@ class StockPage extends StatelessWidget {
       children: [
         moduleHeader(
           title: 'Stock',
-          subtitle: 'Manage company invoices, purchase stock, current warehouse stock, cartons, and payable balance.',
+          subtitle:
+              'Manage company invoices, purchase stock, current warehouse stock, cartons, and payable balance.',
           buttonText: 'Add Invoice / Stock',
           icon: Icons.add_business_rounded,
           onTap: () => showCompanyPurchaseDialog(context, state, onChanged),
@@ -1067,20 +2323,22 @@ class CompanyPurchasePage extends StatelessWidget {
   }
 }
 
-
 class CompanyLedgerPage extends StatefulWidget {
   final AppState state;
   final Future<void> Function() onChanged;
 
-  const CompanyLedgerPage({super.key, required this.state, required this.onChanged});
+  const CompanyLedgerPage(
+      {super.key, required this.state, required this.onChanged});
 
   @override
   State<CompanyLedgerPage> createState() => _CompanyLedgerPageState();
 }
 
 class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
-  final monthController = TextEditingController(text: DateTime.now().month.toString());
-  final yearController = TextEditingController(text: DateTime.now().year.toString());
+  final monthController =
+      TextEditingController(text: DateTime.now().month.toString());
+  final yearController =
+      TextEditingController(text: DateTime.now().year.toString());
 
   AppState get state => widget.state;
 
@@ -1091,7 +2349,9 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
     super.dispose();
   }
 
-  String get selectedMonth => monthController.text.trim().padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
+  String get selectedMonth => monthController.text
+      .trim()
+      .padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
   String get selectedYear => yearController.text.trim();
 
   bool monthOk(String date) {
@@ -1112,7 +2372,8 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
   }
 
   List<CompanyPurchase> get purchases {
-    final rows = state.companyPurchases.where((item) => monthOk(item.date)).toList();
+    final rows =
+        state.companyPurchases.where((item) => monthOk(item.date)).toList();
     rows.sort((a, b) {
       final dateCompare = a.date.compareTo(b.date);
       if (dateCompare != 0) return dateCompare;
@@ -1127,11 +2388,15 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
         .fold<double>(0, (sum, item) => sum + item.remainingAmount);
   }
 
-  double get invoiceDebitTotal => purchases.fold<double>(0, (sum, item) => sum + item.totalBill);
-  double get paymentCreditTotal => purchases.fold<double>(0, (sum, item) => sum + item.paidAmount);
-  double get closingBalance => openingBalance + invoiceDebitTotal - paymentCreditTotal;
+  double get invoiceDebitTotal =>
+      purchases.fold<double>(0, (sum, item) => sum + item.totalBill);
+  double get paymentCreditTotal =>
+      purchases.fold<double>(0, (sum, item) => sum + item.paidAmount);
+  double get closingBalance =>
+      openingBalance + invoiceDebitTotal - paymentCreditTotal;
 
-  Widget filterInput(String label, TextEditingController controller, {double width = 120}) {
+  Widget filterInput(String label, TextEditingController controller,
+      {double width = 120}) {
     return SizedBox(
       width: width,
       child: TextField(
@@ -1178,10 +2443,26 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
           spacing: 14,
           runSpacing: 14,
           children: [
-            StatCard(title: 'Opening Balance', value: '${state.rs(openingBalance)} Dr', icon: Icons.history_rounded, color: Colors.blueGrey),
-            StatCard(title: 'Invoice Debit', value: state.rs(invoiceDebitTotal), icon: Icons.receipt_long_rounded, color: Colors.indigo),
-            StatCard(title: 'Payment Credit', value: state.rs(paymentCreditTotal), icon: Icons.payments_rounded, color: Colors.green),
-            StatCard(title: 'Closing Balance', value: '${state.rs(closingBalance)} Dr', icon: Icons.account_balance_rounded, color: Colors.red),
+            StatCard(
+                title: 'Opening Balance',
+                value: '${state.rs(openingBalance)} Dr',
+                icon: Icons.history_rounded,
+                color: Colors.blueGrey),
+            StatCard(
+                title: 'Invoice Debit',
+                value: state.rs(invoiceDebitTotal),
+                icon: Icons.receipt_long_rounded,
+                color: Colors.indigo),
+            StatCard(
+                title: 'Payment Credit',
+                value: state.rs(paymentCreditTotal),
+                icon: Icons.payments_rounded,
+                color: Colors.green),
+            StatCard(
+                title: 'Closing Balance',
+                value: '${state.rs(closingBalance)} Dr',
+                icon: Icons.account_balance_rounded,
+                color: Colors.red),
           ],
         ),
         const SizedBox(height: 18),
@@ -1196,8 +2477,11 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
 
   Widget ledgerHeaderCard() {
     final today = DateTime.now();
-    final fromText = selectedMonth.isEmpty || selectedYear.isEmpty ? 'All' : '01/$selectedMonth/$selectedYear';
-    final toText = selectedMonth.isEmpty || selectedYear.isEmpty ? 'All' : 'Monthly End';
+    final fromText = selectedMonth.isEmpty || selectedYear.isEmpty
+        ? 'All'
+        : '01/$selectedMonth/$selectedYear';
+    final toText =
+        selectedMonth.isEmpty || selectedYear.isEmpty ? 'All' : 'Monthly End';
 
     return DataCard(
       title: 'Ledger Header',
@@ -1209,7 +2493,8 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
           ledgerInfoBox('To', toText),
           ledgerInfoBox('A/C Code', '021112'),
           ledgerInfoBox('A/C Name', state.company?.name ?? 'AFRA TRADER'),
-          ledgerInfoBox('Printed', '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}'),
+          ledgerInfoBox('Printed',
+              '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}'),
         ],
       ),
     );
@@ -1227,9 +2512,13 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xff6b7280), fontSize: 12)),
+          Text(label,
+              style: const TextStyle(color: Color(0xff6b7280), fontSize: 12)),
           const SizedBox(height: 4),
-          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -1256,12 +2545,15 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
       balance += item.totalBill;
       ledgerRows.add(_CompanyLedgerRow(
         bok: 'SB',
-        voucherNo: item.invoiceNo.isEmpty ? item.id.substring(0, item.id.length > 6 ? 6 : item.id.length) : item.invoiceNo,
+        voucherNo: item.invoiceNo.isEmpty
+            ? item.id.substring(0, item.id.length > 6 ? 6 : item.id.length)
+            : item.invoiceNo,
         date: formatDateForUi(item.date),
         slipNo: '',
         bank: '',
         qty: item.cartons.toString(),
-        description: 'Sales against Invoice No. ${item.invoiceNo.isEmpty ? '-' : item.invoiceNo}',
+        description:
+            'Sales against Invoice No. ${item.invoiceNo.isEmpty ? '-' : item.invoiceNo}',
         debit: item.totalBill,
         credit: 0,
         balance: balance,
@@ -1276,7 +2568,8 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
           slipNo: item.note.isEmpty ? '-' : item.note,
           bank: item.note.toLowerCase().contains('cash') ? 'CASH' : '-',
           qty: '-',
-          description: 'Payment to ${item.companyName.isEmpty ? 'Company' : item.companyName}',
+          description:
+              'Payment to ${item.companyName.isEmpty ? 'Company' : item.companyName}',
           debit: 0,
           credit: item.paidAmount,
           balance: balance,
@@ -1311,10 +2604,17 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
                 DataCell(Text(row.bok)),
                 DataCell(Text(row.voucherNo)),
                 DataCell(Text(row.date)),
-                DataCell(SizedBox(width: 95, child: Text(row.slipNo, overflow: TextOverflow.ellipsis))),
-                DataCell(SizedBox(width: 70, child: Text(row.bank, overflow: TextOverflow.ellipsis))),
+                DataCell(SizedBox(
+                    width: 95,
+                    child: Text(row.slipNo, overflow: TextOverflow.ellipsis))),
+                DataCell(SizedBox(
+                    width: 70,
+                    child: Text(row.bank, overflow: TextOverflow.ellipsis))),
                 DataCell(Text(row.qty)),
-                DataCell(SizedBox(width: 260, child: Text(row.description, overflow: TextOverflow.ellipsis))),
+                DataCell(SizedBox(
+                    width: 260,
+                    child: Text(row.description,
+                        overflow: TextOverflow.ellipsis))),
                 DataCell(Text(row.debit == 0 ? '0' : state.rs(row.debit))),
                 DataCell(Text(row.credit == 0 ? '0' : state.rs(row.credit))),
                 DataCell(Text('${state.rs(row.balance)} Dr')),
@@ -1327,10 +2627,14 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
               const DataCell(Text('')),
               const DataCell(Text('')),
               const DataCell(Text('')),
-              const DataCell(Text('Total Balance', style: TextStyle(fontWeight: FontWeight.w900))),
-              DataCell(Text(state.rs(invoiceDebitTotal), style: const TextStyle(fontWeight: FontWeight.w900))),
-              DataCell(Text(state.rs(paymentCreditTotal), style: const TextStyle(fontWeight: FontWeight.w900))),
-              DataCell(Text('${state.rs(closingBalance)} Dr', style: const TextStyle(fontWeight: FontWeight.w900))),
+              const DataCell(Text('Total Balance',
+                  style: TextStyle(fontWeight: FontWeight.w900))),
+              DataCell(Text(state.rs(invoiceDebitTotal),
+                  style: const TextStyle(fontWeight: FontWeight.w900))),
+              DataCell(Text(state.rs(paymentCreditTotal),
+                  style: const TextStyle(fontWeight: FontWeight.w900))),
+              DataCell(Text('${state.rs(closingBalance)} Dr',
+                  style: const TextStyle(fontWeight: FontWeight.w900))),
             ]),
           ],
         ),
@@ -1361,17 +2665,24 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
                 ],
                 rows: purchases.map((item) {
                   return DataRow(cells: [
-                    DataCell(Text(item.invoiceNo.isEmpty ? '-' : item.invoiceNo)),
+                    DataCell(
+                        Text(item.invoiceNo.isEmpty ? '-' : item.invoiceNo)),
                     DataCell(Text(formatDateForUi(item.date))),
-                    DataCell(SizedBox(width: 150, child: Text(item.companyName.isEmpty ? '-' : item.companyName, overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 150,
+                        child: Text(
+                            item.companyName.isEmpty ? '-' : item.companyName,
+                            overflow: TextOverflow.ellipsis))),
                     DataCell(Text(item.cartons.toString())),
                     DataCell(Text(state.rs(item.totalBill))),
                     DataCell(Text(state.rs(item.paidAmount))),
                     DataCell(Text(state.rs(item.remainingAmount))),
                     DataCell(IconButton(
                       tooltip: 'View invoice',
-                      icon: const Icon(Icons.receipt_long_rounded, color: AppTheme.primary),
-                      onPressed: () => showCompanyInvoicePreview(context, state, item),
+                      icon: const Icon(Icons.receipt_long_rounded,
+                          color: AppTheme.primary),
+                      onPressed: () =>
+                          showCompanyInvoicePreview(context, state, item),
                     )),
                   ]);
                 }).toList(),
@@ -1418,163 +2729,2068 @@ class LoadFormPage extends StatefulWidget {
 }
 
 class _LoadFormPageState extends State<LoadFormPage> {
-  bool showLoadForm = false;
-  String dsrId = '';
-  String productId = '';
-  final qtyController = TextEditingController();
+  String selectedDsrId = '';
+  String selectedSalesmanId = '';
+  final remarksController = TextEditingController();
+  final physicalCashController = TextEditingController(text: '0');
+  final extraAmountController = TextEditingController(text: '0');
+  final ScrollController loadTableScrollController = ScrollController();
+  final List<_SecondarySkuDraftRow> orderRows = [];
 
   AppState get state => widget.state;
 
   @override
   void initState() {
     super.initState();
-    if (state.dsrs.isNotEmpty) dsrId = state.dsrs.first.id;
-    if (state.products.isNotEmpty) productId = state.products.first.id;
+    if (state.dsrs.isNotEmpty) {
+      selectedDsrId = state.dsrs.first.id;
+      selectedSalesmanId = state.dsrs.first.supplierId;
+    } else if (state.suppliers.isNotEmpty) {
+      selectedSalesmanId = state.suppliers.first.id;
+    }
+    orderRows.add(_SecondarySkuDraftRow());
   }
 
   @override
   void dispose() {
-    qtyController.dispose();
+    remarksController.dispose();
+    physicalCashController.dispose();
+    extraAmountController.dispose();
+    loadTableScrollController.dispose();
+    for (final row in orderRows) {
+      row.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> saveInlineLoad() async {
-    if (state.dsrs.isEmpty || state.products.isEmpty) {
-      showSnack(context, 'Add booker, salesman, and product first.');
+  Dsr? get selectedBooker => state.dsrById(selectedDsrId);
+  Supplier? get selectedSalesman => state.supplierById(selectedSalesmanId);
+
+  int _packFor(_SecondarySkuDraftRow row) {
+    final pack = toInt(row.packController.text);
+    return pack <= 0 ? 1 : pack;
+  }
+
+  int _loadUnitsFor(_SecondarySkuDraftRow row) {
+    return (toInt(row.cartonsController.text) * _packFor(row)) +
+        toInt(row.unitsController.text);
+  }
+
+  int _returnUnitsFor(_SecondarySkuDraftRow row) {
+    return (toInt(row.returnCartonsController.text) * _packFor(row)) +
+        toInt(row.returnUnitsController.text);
+  }
+
+  double _loadTotalFor(_SecondarySkuDraftRow row) {
+    return _loadUnitsFor(row) * toDouble(row.packetSellController.text);
+  }
+
+  double _returnTotalFor(_SecondarySkuDraftRow row) {
+    return _returnUnitsFor(row) * toDouble(row.packetSellController.text);
+  }
+
+  double _percentageFor(_SecondarySkuDraftRow row) {
+    final companyPercent =
+        toDouble(row.companyPercentController.text).clamp(0, 100).toDouble();
+    final tradePercent =
+        toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
+    return (companyPercent + tradePercent).clamp(0, 100).toDouble();
+  }
+
+  double _discountAmountFor(_SecondarySkuDraftRow row) {
+    final baseAmount = (_loadTotalFor(row) - _returnTotalFor(row))
+        .clamp(0, double.infinity)
+        .toDouble();
+    return baseAmount * (_percentageFor(row) / 100);
+  }
+
+  double _netTotalFor(_SecondarySkuDraftRow row) {
+    final baseAmount = (_loadTotalFor(row) - _returnTotalFor(row))
+        .clamp(0, double.infinity)
+        .toDouble();
+    return (baseAmount - _discountAmountFor(row))
+        .clamp(0, double.infinity)
+        .toDouble();
+  }
+
+  int get orderUnits =>
+      orderRows.fold(0, (sum, row) => sum + _loadUnitsFor(row));
+  int get returnUnits =>
+      orderRows.fold(0, (sum, row) => sum + _returnUnitsFor(row));
+  double get orderAmount =>
+      orderRows.fold(0, (sum, row) => sum + _loadTotalFor(row));
+  double get returnAmount =>
+      orderRows.fold(0, (sum, row) => sum + _returnTotalFor(row));
+  double get discountAmount =>
+      orderRows.fold(0, (sum, row) => sum + _discountAmountFor(row));
+  double get netLoadAmount =>
+      orderRows.fold(0, (sum, row) => sum + _netTotalFor(row));
+
+  Product? productForRow(_SecondarySkuDraftRow row) {
+    if (row.selectedProductId.isNotEmpty) {
+      final found = state.products
+          .where((product) => product.id == row.selectedProductId)
+          .toList();
+      if (found.isNotEmpty) return found.first;
+    }
+
+    final query = row.skuController.text.trim().toLowerCase();
+    if (query.isEmpty) return null;
+    final exact = state.products.where((product) {
+      return product.name.toLowerCase() == query ||
+          product.sku.toLowerCase() == query;
+    }).toList();
+    return exact.isEmpty ? null : exact.first;
+  }
+
+  void _syncSalesmanFromBooker(String dsrId) {
+    final booker = state.dsrById(dsrId);
+    selectedDsrId = dsrId;
+    if (booker != null && booker.supplierId.isNotEmpty) {
+      selectedSalesmanId = booker.supplierId;
+    }
+  }
+
+  Future<void> saveSettlement() async {
+    if (selectedDsrId.isEmpty) {
+      showSnack(context, 'Add or select a Booker / DSR first.');
+      return;
+    }
+    if (selectedSalesmanId.isEmpty) {
+      showSnack(context, 'Add or select a Salesman first.');
       return;
     }
 
-    final selectedDsr = state.dsrById(dsrId);
-    final salesmanId = selectedDsr?.supplierId ?? '';
+    final validRows = orderRows.where((row) {
+      final product = productForRow(row);
+      return product != null &&
+          (_loadUnitsFor(row) > 0 || _returnUnitsFor(row) > 0);
+    }).toList();
+
+    if (validRows.isEmpty) {
+      showSnack(context,
+          'Search/select product and add load or return quantity first.');
+      return;
+    }
 
     await runAction(
       context,
-      () => state.service.loadStock(
-        companyId: state.companyId,
-        dsrId: dsrId,
-        supplierId: salesmanId,
-        productId: productId,
-        quantity: toInt(qtyController.text),
-      ),
+      () async {
+        for (final row in validRows) {
+          final product = productForRow(row)!;
+          final loadQty = _loadUnitsFor(row);
+          final returnQty = _returnUnitsFor(row);
+
+          if (loadQty > 0) {
+            await state.service.loadStock(
+              companyId: state.companyId,
+              dsrId: selectedDsrId,
+              supplierId: selectedSalesmanId,
+              productId: product.id,
+              quantity: loadQty,
+            );
+          }
+
+          if (returnQty > 0) {
+            await state.service.returnStock(
+              companyId: state.companyId,
+              dsrId: selectedDsrId,
+              productId: product.id,
+              quantity: returnQty,
+              note: 'Secondary Order return • ${remarksController.text.trim()}',
+            );
+          }
+        }
+      },
       widget.onChanged,
     );
 
-    if (mounted) {
-      setState(() {
-        qtyController.clear();
-        showLoadForm = false;
-      });
+    final bookerName = state.dsrName(selectedDsrId);
+    final salesmanName = state.supplierName(selectedSalesmanId);
+
+    for (final row in orderRows) {
+      row.dispose();
     }
+    orderRows
+      ..clear()
+      ..add(_SecondarySkuDraftRow());
+    remarksController.clear();
+
+    if (mounted) {
+      setState(() {});
+      showSnack(
+          context, 'Load settlement saved for $bookerName / $salesmanName.');
+    }
+  }
+
+  void openDsrReport() {
+    if (selectedDsrId.isEmpty) {
+      showSnack(context, 'Select Booker / DSR first.');
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DsrReportPage(
+          state: state,
+          onChanged: widget.onChanged,
+          initialDsrId: selectedDsrId,
+          initialReturnStockAmount: returnAmount,
+          initialExtraAmount: toDouble(extraAmountController.text),
+          initialPhysicalCash: toDouble(physicalCashController.text),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (state.dsrs.isNotEmpty && dsrId.isEmpty) dsrId = state.dsrs.first.id;
-    if (state.products.isNotEmpty && productId.isEmpty) productId = state.products.first.id;
+    if (state.dsrs.isNotEmpty && selectedDsrId.isEmpty) {
+      _syncSalesmanFromBooker(state.dsrs.first.id);
+    }
+    if (state.suppliers.isNotEmpty && selectedSalesmanId.isEmpty) {
+      selectedSalesmanId = state.suppliers.first.id;
+    }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        moduleHeader(
-          title: 'Secondary Order',
-          subtitle: 'Create secondary order/load for a booker from warehouse stock.',
-          buttonText: 'Add Load Form',
-          icon: Icons.move_down_rounded,
-          onTap: () => showLoadDialog(context, state, widget.onChanged),
-        ),
-        const SizedBox(height: 18),
         DataCard(
-          title: 'Load Form Switch',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  'Add load form on this page',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-                subtitle: const Text(
-                  'Turn this on to quickly send stock from warehouse to a booker.',
-                  style: TextStyle(color: Color(0xff6b7280)),
-                ),
-                value: showLoadForm,
-                onChanged: (value) => setState(() => showLoadForm = value),
-              ),
-              if (showLoadForm) ...[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 240,
-                      child: DropdownButtonFormField<String>(
-                        value: dsrId.isEmpty ? null : dsrId,
-                        decoration: const InputDecoration(labelText: 'Booker'),
-                        items: state.dsrs.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
-                        onChanged: (value) => setState(() => dsrId = value ?? dsrId),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 280,
-                      child: DropdownButtonFormField<String>(
-                        value: productId.isEmpty ? null : productId,
-                        decoration: const InputDecoration(labelText: 'Product'),
-                        items: state.products.map((x) {
-                          return DropdownMenuItem(
-                            value: x.id,
-                            child: Text('${x.name} - Warehouse: ${x.warehouseStock}'),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() => productId = value ?? productId),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 180,
-                      child: textInput(
-                        label: 'Order / Load Quantity',
-                        controller: qtyController,
-                        number: true,
-                      ),
-                    ),
-                    primaryButton('Save Load', Icons.save_rounded, saveInlineLoad),
-                  ],
-                ),
-              ],
-            ],
+          title: 'Secondary Order',
+          child: const Text(
+            'Create load, select booker and salesman, manage returned cartons/boxes, and prepare DSR settlement from one page.',
+            style: TextStyle(color: Color(0xff6b7280), height: 1.5),
           ),
         ),
         const SizedBox(height: 18),
-        DataCard(
-          title: 'Secondary Order History',
-          child: state.loads.isEmpty
-              ? emptyBox('No secondary orders found.')
-              : horizontalTable(
-                  DataTable(
-                    columnSpacing: 20,
-                    horizontalMargin: 8,
-                    columns: const [
-                      DataColumn(label: Text('Date')),
-                      DataColumn(label: Text('Booker')),
-                      DataColumn(label: Text('Salesman')),
-                      DataColumn(label: Text('Product')),
-                      DataColumn(label: Text('Qty')),
-                    ],
-                    rows: state.loads.map((x) {
-                      return DataRow(cells: [
-                        DataCell(Text(formatDateForUi(x.date))),
-                        DataCell(SizedBox(width: 140, child: Text(state.dsrName(x.dsrId), overflow: TextOverflow.ellipsis))),
-                        DataCell(SizedBox(width: 140, child: Text(state.supplierName(x.supplierId), overflow: TextOverflow.ellipsis))),
-                        DataCell(SizedBox(width: 180, child: Text(state.productName(x.productId), overflow: TextOverflow.ellipsis))),
-                        DataCell(Text(x.quantity.toString())),
-                      ]);
-                    }).toList(),
-                  ),
-                ),
+        _secondaryOrderCard(),
+        const SizedBox(height: 18),
+        _settlementCard(),
+        const SizedBox(height: 18),
+        _historyCard(),
+      ],
+    );
+  }
+
+  Widget _secondaryOrderCard() {
+    return DataCard(
+      title: 'Secondary Order Sheet',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 980;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _topSelectors(isCompact: isCompact),
+              const SizedBox(height: 14),
+              _selectedSummary(),
+              const SizedBox(height: 24),
+              _sheetTitle('Load SKUs'),
+              const SizedBox(height: 12),
+              _responsiveSkuTable(constraints.maxWidth, rows: orderRows),
+              const SizedBox(height: 18),
+              _footerActions(isCompact: isCompact),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _topSelectors({required bool isCompact}) {
+    final width = isCompact ? double.infinity : 520.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _selectLine(
+          label: 'Select Distributor :',
+          width: width,
+          child: _readOnlySelect(state.company?.name ?? 'AFRA Trader'),
+        ),
+        const SizedBox(height: 12),
+        _selectLine(
+          label: 'Select Booker :',
+          width: width,
+          child: DropdownButtonFormField<String>(
+            value: selectedDsrId.isEmpty ? null : selectedDsrId,
+            isExpanded: true,
+            decoration: const InputDecoration(isDense: true),
+            items: state.dsrs.map((dsr) {
+              return DropdownMenuItem(
+                  value: dsr.id,
+                  child: Text(dsr.name,
+                      maxLines: 1, overflow: TextOverflow.ellipsis));
+            }).toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _syncSalesmanFromBooker(value));
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        _selectLine(
+          label: 'Select Salesman :',
+          width: width,
+          child: DropdownButtonFormField<String>(
+            value: selectedSalesmanId.isEmpty ? null : selectedSalesmanId,
+            isExpanded: true,
+            decoration: const InputDecoration(isDense: true),
+            items: state.suppliers.map((supplier) {
+              return DropdownMenuItem(
+                  value: supplier.id,
+                  child: Text(supplier.name,
+                      maxLines: 1, overflow: TextOverflow.ellipsis));
+            }).toList(),
+            onChanged: (value) => setState(
+                () => selectedSalesmanId = value ?? selectedSalesmanId),
+          ),
         ),
       ],
     );
+  }
+
+  Widget _selectedSummary() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _summaryChip('Selected Distributor',
+            state.company?.name ?? 'AFRA Trader', Icons.business_rounded),
+        _summaryChip('Selected Booker', state.dsrName(selectedDsrId),
+            Icons.badge_rounded),
+        _summaryChip(
+            'Selected Salesman',
+            state.supplierName(selectedSalesmanId),
+            Icons.local_shipping_rounded),
+      ],
+    );
+  }
+
+  Widget _summaryChip(String label, String value, IconData icon) {
+    return Container(
+      width: 310,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xfff8fafc),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xffe5e7eb)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 17,
+            backgroundColor: AppTheme.primary.withOpacity(0.12),
+            child: Icon(icon, color: AppTheme.primary, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        color: Color(0xff6b7280), fontSize: 12)),
+                const SizedBox(height: 3),
+                Text(value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sheetTitle(String text) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 26, fontWeight: FontWeight.w400, color: AppTheme.dark));
+  }
+
+  Widget _selectLine(
+      {required String label, required double width, required Widget child}) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SizedBox(
+            width: 210,
+            child: Text(label,
+                style: const TextStyle(
+                    color: Color(0xff6b7280), fontWeight: FontWeight.w600))),
+        SizedBox(width: width, child: child),
+      ],
+    );
+  }
+
+  Widget _readOnlySelect(String value) {
+    return TextField(
+      controller: TextEditingController(text: value),
+      readOnly: true,
+      decoration: const InputDecoration(isDense: true),
+    );
+  }
+
+  Widget _responsiveSkuTable(double availableWidth,
+      {required List<_SecondarySkuDraftRow> rows}) {
+    final widths = _columnWidths();
+    final tableWidth = widths.fold<double>(0, (sum, item) => sum + item);
+    final scrollController = loadTableScrollController;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xffe5e7eb)),
+        ),
+        child: Scrollbar(
+          controller: scrollController,
+          thumbVisibility: availableWidth < tableWidth,
+          child: SingleChildScrollView(
+            controller: scrollController,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _skuHeaderRow(widths),
+                  ...rows.asMap().entries.map(
+                      (entry) => _skuRow(entry.key + 1, entry.value, widths)),
+                  _addNewRow(),
+                  _totalRow(widths, rows),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<double> _columnWidths() {
+    return <double>[
+      40,
+      225,
+      78,
+      76,
+      72,
+      68,
+      74,
+      74,
+      68,
+      72,
+      72,
+      76,
+      76,
+      84,
+      88,
+      88
+    ];
+  }
+
+  Widget _skuHeaderRow(List<double> widths) {
+    final labels = [
+      'S#',
+      'SKU',
+      'Brand',
+      'SKU Code',
+      'Load\nCTN/Box',
+      'Load\nUnits',
+      'Return\nCTN',
+      'Return\nUnit',
+      'Pack',
+      'Warehouse\nStock',
+      'DSR\nStock',
+      'Price',
+      'Company\n%',
+      'Trade\nOffer',
+      'Net Total',
+      'Status',
+    ];
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xfff8fafc),
+        border:
+            Border(bottom: BorderSide(color: Color(0xffdbeafe), width: 1.2)),
+      ),
+      child: Row(
+        children: List.generate(labels.length, (index) {
+          return _cell(widths[index], labels[index],
+              isHeader: true, align: TextAlign.center, height: 66);
+        }),
+      ),
+    );
+  }
+
+  Widget _skuRow(int index, _SecondarySkuDraftRow row, List<double> widths) {
+    final product = productForRow(row);
+    final warehouseStock = product?.warehouseStock ?? 0;
+    final dsrStock =
+        product == null ? 0 : state.dsrProductStock(selectedDsrId, product.id);
+    final loadUnits = _loadUnitsFor(row);
+    final returnUnits = _returnUnitsFor(row);
+    final netTotal = _netTotalFor(row);
+    final status = product == null
+        ? 'Search'
+        : loadUnits > warehouseStock
+            ? 'Low WH'
+            : returnUnits > dsrStock
+                ? 'Low DSR'
+                : loadUnits == 0 && returnUnits == 0
+                    ? 'Ready'
+                    : 'OK';
+
+    return Row(
+      children: [
+        _cell(widths[0], index.toString(), align: TextAlign.center),
+        _skuSearchCell(widths[1], row),
+        _textInputCell(widths[2], row.brandController, hint: 'Brand'),
+        _textInputCell(widths[3], row.skuCodeController, hint: 'Code'),
+        _inputCell(widths[4], row.cartonsController),
+        _inputCell(widths[5], row.unitsController),
+        _inputCell(widths[6], row.returnCartonsController),
+        _inputCell(widths[7], row.returnUnitsController),
+        _inputCell(widths[8], row.packController),
+        _cell(widths[9], warehouseStock.toString(), align: TextAlign.center),
+        _cell(widths[10], dsrStock.toString(), align: TextAlign.center),
+        _textInputCell(widths[11], row.packetSellController,
+            hint: '0', number: true, align: TextAlign.right),
+        _textInputCell(widths[12], row.companyPercentController,
+            hint: '0%', number: true, align: TextAlign.center),
+        _textInputCell(widths[13], row.tradeOfferController,
+            hint: '0%', number: true, align: TextAlign.center),
+        _cell(widths[14], state.rs(netTotal), align: TextAlign.right),
+        _cell(widths[15], status, align: TextAlign.center),
+      ],
+    );
+  }
+
+  Widget _skuSearchCell(double width, _SecondarySkuDraftRow row) {
+    return Container(
+      width: width,
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffe5e7eb), width: 0.65)),
+      child: Autocomplete<Product>(
+        displayStringForOption: (product) => product.name,
+        optionsBuilder: (TextEditingValue value) {
+          final query = value.text.trim().toLowerCase();
+          if (query.isEmpty) return const Iterable<Product>.empty();
+          return state.products.where((product) {
+            return product.name.toLowerCase().contains(query) ||
+                product.sku.toLowerCase().contains(query) ||
+                product.brand.toLowerCase().contains(query);
+          }).take(8);
+        },
+        onSelected: (product) {
+          setState(() {
+            row.selectedProductId = product.id;
+            row.skuController.text = product.name;
+            row.brandController.text = product.brand;
+            row.skuCodeController.text = product.sku;
+            row.packController.text = product.packetsPerCarton <= 0
+                ? '1'
+                : product.packetsPerCarton.toString();
+            row.packetSellController.text = product.sellingPrice
+                .toStringAsFixed(
+                    product.sellingPrice == product.sellingPrice.roundToDouble()
+                        ? 0
+                        : 2);
+            row.companyPercentController.text = product.companyDiscount
+                .toStringAsFixed(product.companyDiscount ==
+                        product.companyDiscount.roundToDouble()
+                    ? 0
+                    : 2);
+            row.tradeOfferController.text = product.tradeDiscount
+                .toStringAsFixed(product.tradeDiscount ==
+                        product.tradeDiscount.roundToDouble()
+                    ? 0
+                    : 2);
+            row.minStockController.text = product.lowStockLimit.toString();
+          });
+        },
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          if (controller.text != row.skuController.text) {
+            controller.value = row.skuController.value;
+          }
+          controller.addListener(() {
+            if (row.skuController.text != controller.text) {
+              row.skuController.text = controller.text;
+              row.selectedProductId = '';
+            }
+          });
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            style: const TextStyle(fontSize: 12),
+            decoration: InputDecoration(
+              hintText: 'Search SKU/product',
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+            ),
+            onChanged: (_) => setState(() {}),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(10),
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxHeight: 260, maxWidth: 360),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final product = options.elementAt(index);
+                    return ListTile(
+                      dense: true,
+                      title: Text(product.name,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(
+                          '${product.brand} • ${product.sku} • Stock ${product.warehouseStock}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      onTap: () => onSelected(product),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _addNewRow() {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          orderRows.add(_SecondarySkuDraftRow());
+        });
+      },
+      child: Container(
+        height: 34,
+        decoration: const BoxDecoration(
+          color: Color(0xfff8fafc),
+          border: Border(
+            left: BorderSide(color: Color(0xffe5e7eb)),
+            right: BorderSide(color: Color(0xffe5e7eb)),
+            bottom: BorderSide(color: Color(0xffe5e7eb)),
+          ),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(width: 10),
+            Icon(Icons.add_box_rounded, size: 16, color: Color(0xff64748b)),
+            SizedBox(width: 6),
+            Text('Add New Row',
+                style: TextStyle(
+                    color: Color(0xff334155), fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _totalRow(List<double> widths, List<_SecondarySkuDraftRow> rows) {
+    final loadCartons = rows.fold<int>(
+        0, (sum, row) => sum + toInt(row.cartonsController.text));
+    final loadUnits = rows.fold<int>(0, (sum, row) => sum + _loadUnitsFor(row));
+    final returnCtn = rows.fold<int>(
+        0, (sum, row) => sum + toInt(row.returnCartonsController.text));
+    final returnUnits =
+        rows.fold<int>(0, (sum, row) => sum + _returnUnitsFor(row));
+    final netAmount =
+        rows.fold<double>(0, (sum, row) => sum + _netTotalFor(row));
+
+    return Row(
+      children: [
+        _cell(widths[0] + widths[1] + widths[2] + widths[3], 'Total',
+            align: TextAlign.right, isTotal: true),
+        _cell(widths[4], loadCartons.toString(),
+            align: TextAlign.center, isTotal: true),
+        _cell(widths[5], loadUnits.toString(),
+            align: TextAlign.center, isTotal: true),
+        _cell(widths[6], returnCtn.toString(),
+            align: TextAlign.center, isTotal: true),
+        _cell(widths[7], returnUnits.toString(),
+            align: TextAlign.center, isTotal: true),
+        _cell(widths.sublist(8, 14).fold<double>(0, (sum, item) => sum + item),
+            '',
+            isTotal: true),
+        _cell(widths[14], state.rs(netAmount),
+            align: TextAlign.right, isTotal: true),
+        _cell(widths[15], 'Load', align: TextAlign.center, isTotal: true),
+      ],
+    );
+  }
+
+  Widget _cell(
+    double width,
+    String text, {
+    bool isHeader = false,
+    bool isTotal = false,
+    TextAlign align = TextAlign.left,
+    double height = 44,
+  }) {
+    final bg = isHeader
+        ? const Color(0xfff8fafc)
+        : isTotal
+            ? const Color(0xfff8fafc)
+            : Colors.white;
+
+    return Container(
+      width: width,
+      height: height,
+      padding: EdgeInsets.symmetric(
+          horizontal: isHeader ? 8 : 6, vertical: isHeader ? 10 : 6),
+      alignment: _alignmentFor(align),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border.all(
+            color: isHeader ? const Color(0xffdbeafe) : const Color(0xffe5e7eb),
+            width: 0.65),
+      ),
+      child: Text(
+        text,
+        maxLines: isHeader ? 3 : 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: align,
+        style: TextStyle(
+          color: isHeader ? AppTheme.primary : AppTheme.dark,
+          fontSize: isHeader ? 10.5 : 12,
+          fontWeight: isHeader || isTotal ? FontWeight.w800 : FontWeight.w500,
+          height: isHeader ? 1.25 : 1.15,
+        ),
+      ),
+    );
+  }
+
+  Widget _inputCell(double width, TextEditingController controller) {
+    return _textInputCell(width, controller,
+        hint: '0', number: true, align: TextAlign.center);
+  }
+
+  Widget _textInputCell(
+    double width,
+    TextEditingController controller, {
+    String hint = '',
+    bool number = false,
+    TextAlign align = TextAlign.left,
+  }) {
+    return Container(
+      width: width,
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffe5e7eb), width: 0.65)),
+      child: TextField(
+        controller: controller,
+        keyboardType: number ? TextInputType.number : TextInputType.text,
+        textAlign: align,
+        style: const TextStyle(fontSize: 12),
+        decoration: InputDecoration(
+          hintText: hint,
+          isDense: true,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
+  }
+
+  Alignment _alignmentFor(TextAlign align) {
+    switch (align) {
+      case TextAlign.center:
+        return Alignment.center;
+      case TextAlign.right:
+      case TextAlign.end:
+        return Alignment.centerRight;
+      default:
+        return Alignment.centerLeft;
+    }
+  }
+
+  Widget _footerActions({required bool isCompact}) {
+    final now = DateTime.now();
+    final dateText =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(thickness: 3, color: Color(0xffcbd5e1)),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 22,
+          runSpacing: 16,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: isCompact ? double.infinity : 430,
+              child: TextField(
+                controller: remarksController,
+                minLines: 2,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                    labelText: 'Remarks', alignLabelWithHint: true),
+              ),
+            ),
+            SizedBox(
+              width: isCompact ? double.infinity : 210,
+              child: TextField(
+                controller: extraAmountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Extra Amount'),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            SizedBox(
+              width: isCompact ? double.infinity : 210,
+              child: TextField(
+                controller: physicalCashController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Physical Cash'),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            SizedBox(
+              width: isCompact ? double.infinity : 230,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: saveSettlement,
+                icon: const Icon(Icons.save_rounded, size: 18),
+                label: const Text('Save Load Settlement'),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white),
+              ),
+            ),
+            SizedBox(
+              width: isCompact ? double.infinity : 210,
+              height: 54,
+              child: OutlinedButton.icon(
+                onPressed: openDsrReport,
+                icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                label: const Text('Open DSR Report'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        Wrap(
+          spacing: 70,
+          runSpacing: 8,
+          children: [
+            _auditText('Order Added On :', dateText),
+            _auditText('Order Added By :', state.profile?.fullName ?? 'Admin'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _settlementCard() {
+    final expectedCash = netLoadAmount + toDouble(extraAmountController.text);
+    final physicalCash = toDouble(physicalCashController.text);
+    final diff = physicalCash - expectedCash;
+
+    return DataCard(
+      title: 'Load Form Settlement',
+      child: Wrap(
+        spacing: 14,
+        runSpacing: 14,
+        children: [
+          StatCard(
+              title: 'Load Amount',
+              value: state.rs(orderAmount),
+              icon: Icons.move_down_rounded,
+              color: Colors.blue),
+          StatCard(
+              title: 'Return Products',
+              value: state.rs(returnAmount),
+              icon: Icons.keyboard_return_rounded,
+              color: Colors.orange),
+          StatCard(
+              title: 'Discount / Trade',
+              value: state.rs(discountAmount),
+              icon: Icons.percent_rounded,
+              color: Colors.purple),
+          StatCard(
+              title: 'Net Load',
+              value: state.rs(netLoadAmount),
+              icon: Icons.calculate_rounded,
+              color: Colors.indigo),
+          StatCard(
+              title: diff < 0 ? 'Short Cash' : 'Excess Cash',
+              value: state.rs(diff.abs()),
+              icon: Icons.account_balance_wallet_rounded,
+              color: diff < 0 ? Colors.red : Colors.green),
+        ],
+      ),
+    );
+  }
+
+  Widget _historyCard() {
+    return DataCard(
+      title: 'Secondary Order History',
+      child: state.loads.isEmpty
+          ? emptyBox('No secondary orders found.')
+          : horizontalTable(
+              DataTable(
+                columnSpacing: 20,
+                horizontalMargin: 8,
+                columns: const [
+                  DataColumn(label: Text('Date')),
+                  DataColumn(label: Text('Booker')),
+                  DataColumn(label: Text('Salesman')),
+                  DataColumn(label: Text('Product')),
+                  DataColumn(label: Text('Qty')),
+                ],
+                rows: state.loads.map((x) {
+                  return DataRow(cells: [
+                    DataCell(Text(formatDateForUi(x.date))),
+                    DataCell(SizedBox(
+                        width: 140,
+                        child: Text(state.dsrName(x.dsrId),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 140,
+                        child: Text(state.supplierName(x.supplierId),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 180,
+                        child: Text(state.productName(x.productId),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(Text(x.quantity.toString())),
+                  ]);
+                }).toList(),
+              ),
+            ),
+    );
+  }
+
+  Widget _auditText(String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+            width: 150,
+            child: Text(label,
+                style: const TextStyle(
+                    color: Color(0xff6b7280), fontWeight: FontWeight.w600))),
+        Text(value,
+            style: const TextStyle(
+                color: AppTheme.dark, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+class LoadFormSettlementPage extends StatefulWidget {
+  final AppState state;
+  final Future<void> Function() onChanged;
+
+  const LoadFormSettlementPage({
+    super.key,
+    required this.state,
+    required this.onChanged,
+  });
+
+  @override
+  State<LoadFormSettlementPage> createState() => _LoadFormSettlementPageState();
+}
+
+class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
+  String selectedDsrId = '';
+  String selectedSalesmanId = '';
+  final searchController = TextEditingController();
+  final FocusNode searchFocusNode = FocusNode();
+  final dateController = TextEditingController();
+  final ScrollController tableScrollController = ScrollController();
+  String selectedSearchProductId = '';
+
+  AppState get state => widget.state;
+
+  @override
+  void initState() {
+    super.initState();
+    dateController.text = state.today;
+    if (state.dsrs.isNotEmpty) {
+      selectedDsrId = state.dsrs.first.id;
+      selectedSalesmanId = state.dsrs.first.supplierId;
+    } else if (state.suppliers.isNotEmpty) {
+      selectedSalesmanId = state.suppliers.first.id;
+    }
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    searchFocusNode.dispose();
+    dateController.dispose();
+    tableScrollController.dispose();
+    super.dispose();
+  }
+
+  void _selectDsr(String dsrId) {
+    final dsr = state.dsrById(dsrId);
+    selectedDsrId = dsrId;
+    selectedSearchProductId = '';
+    if (dsr != null && dsr.supplierId.isNotEmpty) {
+      selectedSalesmanId = dsr.supplierId;
+    }
+  }
+
+  String _dsrLabel(Dsr dsr) {
+    final index = state.dsrs.indexWhere((item) => item.id == dsr.id) + 1;
+    return '${dsr.name}-$index';
+  }
+
+  String _searchClean(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
+  }
+
+  String _loadSearchText(LoadEntry load) {
+    final product = state.productById(load.productId);
+    final dsr = state.dsrById(load.dsrId);
+    final dsrLabel = dsr == null ? '' : _dsrLabel(dsr);
+    final productName = state.productName(load.productId);
+    final salesmanName = state.supplierName(load.supplierId);
+    final sku = product?.sku ?? '';
+    final brand = product?.brand ?? '';
+
+    return [
+      load.id,
+      load.date,
+      load.quantity.toString(),
+      productName,
+      sku,
+      brand,
+      state.dsrName(load.dsrId),
+      dsrLabel,
+      'DSR Name : ( $dsrLabel )',
+      salesmanName,
+    ].join(' ');
+  }
+
+  bool _loadMatchesSearch(LoadEntry load, String query) {
+    final cleanQuery = _searchClean(query);
+    if (cleanQuery.isEmpty) return true;
+
+    final plainText = _loadSearchText(load).toLowerCase();
+    final cleanText = _searchClean(_loadSearchText(load));
+
+    return plainText.contains(query.toLowerCase()) ||
+        cleanText.contains(cleanQuery);
+  }
+
+  List<LoadEntry> get filteredLoads {
+    final query = searchController.text.trim();
+    final date = dateController.text.trim();
+    final hasSearch = query.isNotEmpty;
+
+    return state.loads.where((load) {
+      // When the user types in search, search the full Secondary Order load
+      // history. Do not hide matching records behind the selected DSR,
+      // salesman, or date filters.
+      if (hasSearch) {
+        if (!_loadMatchesSearch(load, query)) return false;
+        if (selectedSearchProductId.isNotEmpty &&
+            load.productId != selectedSearchProductId) {
+          return false;
+        }
+        if (selectedSearchProductId.isNotEmpty &&
+            selectedDsrId.isNotEmpty &&
+            load.dsrId != selectedDsrId) {
+          return false;
+        }
+        return true;
+      }
+
+      if (selectedDsrId.isNotEmpty && load.dsrId != selectedDsrId) {
+        return false;
+      }
+      if (selectedSalesmanId.isNotEmpty &&
+          load.supplierId.isNotEmpty &&
+          load.supplierId != selectedSalesmanId) {
+        return false;
+      }
+
+      // Old load entries may not have a date value because older loadStock()
+      // inserts did not save the date. Do not hide those records.
+      final loadDate = load.date.trim();
+      if (date.isNotEmpty && loadDate.isNotEmpty && loadDate != date) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  List<_LoadFormProductLine> get productLines {
+    final lines = filteredLoads.map((load) {
+      return _LoadFormProductLine(
+        loadId: load.id,
+        productId: load.productId,
+        product: state.productById(load.productId),
+        quantity: load.quantity,
+        date: load.date,
+        dsrId: load.dsrId,
+        salesmanId: load.supplierId,
+      );
+    }).toList();
+
+    lines.sort((a, b) {
+      final dateCompare = b.date.compareTo(a.date);
+      if (dateCompare != 0) return dateCompare;
+      final nameCompare = a.productName.compareTo(b.productName);
+      if (nameCompare != 0) return nameCompare;
+      return a.loadId.compareTo(b.loadId);
+    });
+
+    return lines;
+  }
+
+  double get loadAmount {
+    return productLines.fold(0.0, (sum, line) => sum + line.totalAmount);
+  }
+
+  int get totalLoadUnits {
+    return productLines.fold(0, (sum, line) => sum + line.quantity);
+  }
+
+  List<SaleEntry> get selectedSales {
+    if (selectedDsrId.isEmpty) return [];
+    return state.salesFor(selectedDsrId, dateController.text.trim());
+  }
+
+  List<SaleEntry> get creditBills {
+    return selectedSales.where((sale) => sale.type == SaleType.credit).toList();
+  }
+
+  List<RecoveryEntry> get recoveryBills {
+    if (selectedDsrId.isEmpty) return [];
+    return state.recoveriesFor(selectedDsrId, dateController.text.trim());
+  }
+
+  double get grossSale {
+    return selectedSales.fold(0.0, (sum, sale) => sum + sale.total);
+  }
+
+  double get creditSale {
+    return creditBills.fold(0.0, (sum, sale) => sum + sale.total);
+  }
+
+  double get recoveryAmount {
+    return recoveryBills.fold(0.0, (sum, item) => sum + item.receivedAmount);
+  }
+
+  double get netCashSale => grossSale - creditSale;
+  double get totalDsrCash => netCashSale + recoveryAmount;
+
+  List<_LoadFormSearchSuggestion> get searchSuggestions {
+    return _suggestionsForQuery(searchController.text);
+  }
+
+  List<_LoadFormSearchSuggestion> _suggestionsForQuery(String rawQuery) {
+    final query = rawQuery.trim();
+    if (query.isEmpty) return [];
+
+    final cleanQuery = _searchClean(query);
+    final results = <_LoadFormSearchSuggestion>[];
+    final addedKeys = <String>{};
+
+    bool matches(String text) {
+      final lower = text.toLowerCase();
+      final clean = _searchClean(text);
+      return lower.contains(query.toLowerCase()) || clean.contains(cleanQuery);
+    }
+
+    for (final dsr in state.dsrs) {
+      final label = _dsrLabel(dsr);
+      final salesman = state.supplierName(dsr.supplierId);
+      final text = '${dsr.name} $label DSR Name : ( $label ) $salesman';
+
+      if (matches(text)) {
+        final key = 'dsr-${dsr.id}';
+        if (addedKeys.add(key)) {
+          results.add(_LoadFormSearchSuggestion(
+            type: 'DSR',
+            title: 'DSR Name : ( $label )',
+            subtitle: 'Salesman: $salesman',
+            dsrId: dsr.id,
+            salesmanId: dsr.supplierId,
+          ));
+        }
+      }
+    }
+
+    for (final load in state.loads) {
+      final product = state.productById(load.productId);
+      final dsr = state.dsrById(load.dsrId);
+      final label = dsr == null ? state.dsrName(load.dsrId) : _dsrLabel(dsr);
+      final salesman = state.supplierName(load.supplierId);
+      final productName = state.productName(load.productId);
+      final sku = product?.sku ?? '';
+      final brand = product?.brand ?? '';
+      final text = '$productName $sku $brand $label $salesman ${load.date} ${load.quantity} ${load.id}';
+
+      if (matches(text)) {
+        final key = 'load-${load.id}';
+        if (addedKeys.add(key)) {
+          results.add(_LoadFormSearchSuggestion(
+            type: 'Product',
+            title: productName,
+            subtitle:
+                'DSR: $label • Salesman: $salesman • SKU: ${sku.isEmpty ? '-' : sku} • Qty: ${load.quantity}',
+            dsrId: load.dsrId,
+            salesmanId: load.supplierId,
+            productId: load.productId,
+            date: load.date,
+          ));
+        }
+      }
+
+      if (results.length >= 12) break;
+    }
+
+    return results.take(12).toList();
+  }
+
+  void applySearchSuggestion(_LoadFormSearchSuggestion suggestion) {
+    setState(() {
+      selectedDsrId = suggestion.dsrId;
+      selectedSalesmanId = suggestion.salesmanId;
+      selectedSearchProductId = suggestion.productId;
+      if (suggestion.date.trim().isNotEmpty) {
+        dateController.text = suggestion.date.trim();
+      }
+      searchController.text = suggestion.title;
+    });
+  }
+
+  List<String> get shownDsrNames {
+    final names = filteredLoads
+        .map((load) {
+          final dsr = state.dsrById(load.dsrId);
+          return dsr == null ? state.dsrName(load.dsrId) : _dsrLabel(dsr);
+        })
+        .where((name) => name.trim().isNotEmpty && name != '-')
+        .toSet()
+        .toList();
+
+    if (names.isEmpty && selectedDsrId.isNotEmpty) {
+      final dsr = state.dsrById(selectedDsrId);
+      if (dsr != null) names.add(_dsrLabel(dsr));
+    }
+
+    return names;
+  }
+
+  List<String> get shownSalesmanNames {
+    final names = filteredLoads
+        .map((load) => state.supplierName(load.supplierId))
+        .where((name) => name.trim().isNotEmpty && name != '-')
+        .toSet()
+        .toList();
+
+    if (names.isEmpty && selectedSalesmanId.isNotEmpty) {
+      final name = state.supplierName(selectedSalesmanId);
+      if (name != '-') names.add(name);
+    }
+
+    return names;
+  }
+
+  void openPrintPreview() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog.fullscreen(
+          child: Scaffold(
+            backgroundColor: const Color(0xfff3f4f6),
+            appBar: AppBar(
+              title: const Text('Load Form Settlement Print Preview'),
+              actions: [
+                ElevatedButton.icon(
+                  onPressed: printCurrentPage,
+                  icon: const Icon(Icons.print_rounded, size: 18),
+                  label: const Text('Print'),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(22),
+              child: Center(
+                child: LoadFormSettlementPrintable(
+                  state: state,
+                  date: dateController.text.trim(),
+                  distributorName: state.company?.name ?? 'AFRA Trader',
+                  dsrName: selectedDsrId.isEmpty
+                      ? '-'
+                      : _dsrLabel(state.dsrById(selectedDsrId)!),
+                  salesmanName: state.supplierName(selectedSalesmanId),
+                  productLines: productLines,
+                  grossSale: grossSale,
+                  loadAmount: loadAmount,
+                  creditBills: creditBills,
+                  recoveryBills: recoveryBills,
+                  recoveryAmount: recoveryAmount,
+                  totalDsrCash: totalDsrCash,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.dsrs.isNotEmpty && selectedDsrId.isEmpty) {
+      _selectDsr(state.dsrs.first.id);
+    }
+    if (state.suppliers.isNotEmpty && selectedSalesmanId.isEmpty) {
+      selectedSalesmanId = state.suppliers.first.id;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _controlsCard(),
+        const SizedBox(height: 18),
+        _summaryCards(),
+        const SizedBox(height: 18),
+        _loadFormCard(),
+      ],
+    );
+  }
+
+  Widget _controlsCard() {
+    return DataCard(
+      title: 'Search Load Form',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 980;
+          final fieldWidth = wide ? 300.0 : double.infinity;
+
+          return Wrap(
+            spacing: 14,
+            runSpacing: 14,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: wide ? 360 : double.infinity,
+                child: _searchAutocomplete(),
+              ),
+              SizedBox(
+                width: fieldWidth,
+                child: DropdownButtonFormField<String>(
+                  value: state.company?.name ?? 'AFRA Trader',
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Distributor',
+                    prefixIcon: Icon(Icons.business_rounded),
+                  ),
+                  items: [state.company?.name ?? 'AFRA Trader'].map((name) {
+                    return DropdownMenuItem(
+                      value: name,
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (_) {},
+                ),
+              ),
+              SizedBox(
+                width: fieldWidth,
+                child: TextField(
+                  controller: dateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Date',
+                    hintText: 'YYYY-MM-DD',
+                    prefixIcon: Icon(Icons.calendar_month_rounded),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              SizedBox(
+                width: fieldWidth,
+                child: DropdownButtonFormField<String>(
+                  value: selectedDsrId.isEmpty ? null : selectedDsrId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Select DSR',
+                    prefixIcon: Icon(Icons.badge_rounded),
+                  ),
+                  items: state.dsrs.map((dsr) {
+                    return DropdownMenuItem(
+                      value: dsr.id,
+                      child: Text(
+                        'DSR Name : ( ${_dsrLabel(dsr)} )',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _selectDsr(value));
+                  },
+                ),
+              ),
+              SizedBox(
+                width: fieldWidth,
+                child: DropdownButtonFormField<String>(
+                  value: selectedSalesmanId.isEmpty ? null : selectedSalesmanId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Salesman',
+                    prefixIcon: Icon(Icons.local_shipping_rounded),
+                  ),
+                  items: state.suppliers.map((supplier) {
+                    return DropdownMenuItem(
+                      value: supplier.id,
+                      child: Text(
+                        supplier.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(
+                      () => selectedSalesmanId = value ?? selectedSalesmanId),
+                ),
+              ),
+              SizedBox(
+                width: wide ? 190 : double.infinity,
+                height: 54,
+                child: ElevatedButton.icon(
+                  onPressed: openPrintPreview,
+                  icon: const Icon(Icons.print_rounded, size: 18),
+                  label: const Text('Print Load Form'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _searchAutocomplete() {
+    return RawAutocomplete<_LoadFormSearchSuggestion>(
+      textEditingController: searchController,
+      focusNode: searchFocusNode,
+      displayStringForOption: (suggestion) => suggestion.title,
+      optionsBuilder: (TextEditingValue value) {
+        return _suggestionsForQuery(value.text);
+      },
+      onSelected: applySearchSuggestion,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: 'Search DSR or product',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: controller.text.trim().isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: () {
+                      setState(() {
+                        controller.clear();
+                        searchController.clear();
+                        selectedSearchProductId = '';
+                      });
+                      searchFocusNode.requestFocus();
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+          ),
+          onChanged: (_) => setState(() => selectedSearchProductId = ''),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        final list = options.toList();
+
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 12,
+            borderRadius: BorderRadius.circular(14),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280, maxWidth: 430),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Color(0xffdbeafe)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  itemCount: list.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final suggestion = list[index];
+                    final isDsr = suggestion.type == 'DSR';
+
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 17,
+                        backgroundColor: (isDsr ? Colors.blue : Colors.green)
+                            .withOpacity(0.12),
+                        child: Icon(
+                          isDsr
+                              ? Icons.badge_rounded
+                              : Icons.inventory_2_rounded,
+                          size: 18,
+                          color: isDsr ? Colors.blue : Colors.green,
+                        ),
+                      ),
+                      title: Text(
+                        suggestion.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(
+                        suggestion.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Text(
+                        suggestion.type,
+                        style: const TextStyle(
+                          color: Color(0xff64748b),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      onTap: () => onSelected(suggestion),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _searchSuggestionList() {
+    final suggestions = searchSuggestions;
+    if (searchController.text.trim().isEmpty || suggestions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      constraints: const BoxConstraints(maxHeight: 260),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xffdbeafe)),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final suggestion = suggestions[index];
+          final isDsr = suggestion.type == 'DSR';
+
+          return ListTile(
+            dense: true,
+            leading: CircleAvatar(
+              radius: 17,
+              backgroundColor:
+                  (isDsr ? Colors.blue : Colors.green).withOpacity(0.12),
+              child: Icon(
+                isDsr ? Icons.badge_rounded : Icons.inventory_2_rounded,
+                size: 18,
+                color: isDsr ? Colors.blue : Colors.green,
+              ),
+            ),
+            title: Text(
+              suggestion.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            subtitle: Text(
+              suggestion.subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: Text(
+              suggestion.type,
+              style: const TextStyle(
+                color: Color(0xff64748b),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            onTap: () => applySearchSuggestion(suggestion),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _summaryCards() {
+    return Wrap(
+      spacing: 14,
+      runSpacing: 14,
+      children: [
+        StatCard(
+          title: 'Secondary Load',
+          value: state.rs(loadAmount),
+          icon: Icons.move_down_rounded,
+          color: Colors.blue,
+        ),
+        StatCard(
+          title: 'Load Units',
+          value: totalLoadUnits.toString(),
+          icon: Icons.inventory_2_rounded,
+          color: Colors.indigo,
+        ),
+        StatCard(
+          title: 'Gross Sale',
+          value: state.rs(grossSale),
+          icon: Icons.trending_up_rounded,
+          color: Colors.green,
+        ),
+        StatCard(
+          title: 'Credit Bills',
+          value: state.rs(creditSale),
+          icon: Icons.credit_score_rounded,
+          color: Colors.red,
+        ),
+        StatCard(
+          title: 'Recovery',
+          value: state.rs(recoveryAmount),
+          icon: Icons.call_received_rounded,
+          color: Colors.purple,
+        ),
+      ],
+    );
+  }
+
+  Widget _loadFormCard() {
+    return DataCard(
+      title: 'Created Load Form From Secondary Order',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _createdLoadInfoBar(),
+          const SizedBox(height: 12),
+          productLines.isEmpty
+              ? emptyBox('No secondary order load found for selected DSR/date/search.')
+              : Scrollbar(
+              controller: tableScrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: tableScrollController,
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 22,
+                  columns: const [
+                    DataColumn(label: Text('S#')),
+                    DataColumn(label: Text('SKU')),
+                    DataColumn(label: Text('SKU Code')),
+                    DataColumn(label: Text('CTN')),
+                    DataColumn(label: Text('Units')),
+                    DataColumn(label: Text('Total Units')),
+                    DataColumn(label: Text('Rate')),
+                    DataColumn(label: Text('Amount')),
+                  ],
+                  rows: [
+                    ...productLines.asMap().entries.map((entry) {
+                      final line = entry.value;
+                      return DataRow(cells: [
+                        DataCell(Text('${entry.key + 1}')),
+                        DataCell(SizedBox(
+                          width: 240,
+                          child: Text(
+                            line.productName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
+                        DataCell(Text(line.sku)),
+                        DataCell(Text(line.cartons.toString())),
+                        DataCell(Text(line.looseUnits.toString())),
+                        DataCell(Text(line.quantity.toString())),
+                        DataCell(Text(state.rs(line.rate))),
+                        DataCell(Text(state.rs(line.totalAmount))),
+                      ]);
+                    }),
+                    DataRow(cells: [
+                      const DataCell(Text('')),
+                      const DataCell(Text('Total', style: TextStyle(fontWeight: FontWeight.w900))),
+                      const DataCell(Text('')),
+                      DataCell(Text(productLines.fold<int>(0, (sum, line) => sum + line.cartons).toString(), style: const TextStyle(fontWeight: FontWeight.w900))),
+                      DataCell(Text(productLines.fold<int>(0, (sum, line) => sum + line.looseUnits).toString(), style: const TextStyle(fontWeight: FontWeight.w900))),
+                      DataCell(Text(totalLoadUnits.toString(), style: const TextStyle(fontWeight: FontWeight.w900))),
+                      const DataCell(Text('')),
+                      DataCell(Text(state.rs(loadAmount), style: const TextStyle(fontWeight: FontWeight.w900))),
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _createdLoadInfoBar() {
+    final dsrText = shownDsrNames.isEmpty ? '-' : shownDsrNames.join(', ');
+    final salesmanText =
+        shownSalesmanNames.isEmpty ? '-' : shownSalesmanNames.join(', ');
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        _infoChip(Icons.badge_rounded, 'DSR', dsrText, Colors.blue),
+        _infoChip(Icons.local_shipping_rounded, 'Salesman', salesmanText,
+            Colors.indigo),
+        _infoChip(Icons.calendar_month_rounded, 'Date',
+            dateController.text.trim().isEmpty ? '-' : formatDateForUi(dateController.text.trim()),
+            Colors.green),
+      ],
+    );
+  }
+
+  Widget _infoChip(IconData icon, String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              color: Color(0xff64748b),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadFormSearchSuggestion {
+  final String type;
+  final String title;
+  final String subtitle;
+  final String dsrId;
+  final String salesmanId;
+  final String productId;
+  final String date;
+
+  const _LoadFormSearchSuggestion({
+    required this.type,
+    required this.title,
+    required this.subtitle,
+    required this.dsrId,
+    required this.salesmanId,
+    this.productId = '',
+    this.date = '',
+  });
+}
+
+class _LoadFormProductLine {
+  final String loadId;
+  final String productId;
+  final Product? product;
+  final String date;
+  final String dsrId;
+  final String salesmanId;
+  int quantity;
+
+  _LoadFormProductLine({
+    required this.loadId,
+    required this.productId,
+    required this.product,
+    required this.quantity,
+    this.date = '',
+    this.dsrId = '',
+    this.salesmanId = '',
+  });
+
+  String get productName => product?.name ?? productId;
+  String get sku => product?.sku ?? '-';
+  int get pack {
+    final value = product?.packetsPerCarton ?? 1;
+    return value <= 0 ? 1 : value;
+  }
+  int get cartons => quantity ~/ pack;
+  int get looseUnits => quantity % pack;
+  double get rate => product?.sellingPrice ?? 0;
+  double get totalAmount => quantity * rate;
+}
+
+class LoadFormSettlementPrintable extends StatelessWidget {
+  final AppState state;
+  final String date;
+  final String distributorName;
+  final String dsrName;
+  final String salesmanName;
+  final List<_LoadFormProductLine> productLines;
+  final double grossSale;
+  final double loadAmount;
+  final List<SaleEntry> creditBills;
+  final List<RecoveryEntry> recoveryBills;
+  final double recoveryAmount;
+  final double totalDsrCash;
+
+  const LoadFormSettlementPrintable({
+    super.key,
+    required this.state,
+    required this.date,
+    required this.distributorName,
+    required this.dsrName,
+    required this.salesmanName,
+    required this.productLines,
+    required this.grossSale,
+    required this.loadAmount,
+    required this.creditBills,
+    required this.recoveryBills,
+    required this.recoveryAmount,
+    required this.totalDsrCash,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final creditTotal = creditBills.fold(0.0, (sum, item) => sum + item.total);
+    final netCashSale = grossSale - creditTotal;
+
+    return Container(
+      width: 920,
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _header(),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: printTable(
+                  title: 'Gross Sale / Cash Calculation',
+                  headers: const ['Particular', 'Amount'],
+                  rows: [
+                    ['Gross Sale', state.rs(grossSale)],
+                    ['Load Amount', state.rs(loadAmount)],
+                    ['Return Stock Amount', state.rs(0)],
+                    ['Extra Amount', state.rs(0)],
+                    ['Net Sale', state.rs(grossSale)],
+                    ['Less Credit', state.rs(creditTotal)],
+                    ['Net Cash Sale', state.rs(netCashSale)],
+                    ['Plus Recovery', state.rs(recoveryAmount)],
+                    ['Total DSR Cash', state.rs(totalDsrCash)],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: printTable(
+                  title: '$distributorName Cash',
+                  headers: const ['Note', 'Count', 'Amount'],
+                  rows: const [
+                    ['5000', '', ''],
+                    ['1000', '', ''],
+                    ['500', '', ''],
+                    ['100', '', ''],
+                    ['50', '', ''],
+                    ['20', '', ''],
+                    ['10', '', ''],
+                    ['Coins', '', ''],
+                    ['Short', '', ''],
+                    ['Excess', '', ''],
+                  ],
+                  totalLabel: 'Total DSR Cash',
+                  totalValue: state.rs(totalDsrCash),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          printTable(
+            title: 'Detail of Loaded SKUs From Secondary Order',
+            headers: const ['S#', 'SKU', 'SKU Code', 'CTN', 'Units', 'Total Units', 'Rate', 'Amount'],
+            rows: productLines.asMap().entries.map((entry) {
+              final line = entry.value;
+              return [
+                '${entry.key + 1}',
+                line.productName,
+                line.sku,
+                line.cartons.toString(),
+                line.looseUnits.toString(),
+                line.quantity.toString(),
+                state.rs(line.rate),
+                state.rs(line.totalAmount),
+              ];
+            }).toList(),
+            totalLabel: 'Total Amount',
+            totalValue: state.rs(loadAmount),
+          ),
+          const SizedBox(height: 12),
+          printTable(
+            title: 'Detail of Credit Bills',
+            headers: const ['Bill No', 'Date', 'Shop Name', 'Amount'],
+            rows: creditBills.map((sale) {
+              return [
+                sale.billNo,
+                formatDateForUi(sale.date),
+                state.shopName(sale.shopkeeperId),
+                state.rs(sale.total),
+              ];
+            }).toList(),
+            totalLabel: 'Total Amount',
+            totalValue: state.rs(creditTotal),
+          ),
+          const SizedBox(height: 12),
+          printTable(
+            title: 'Detail of Recovery Bills',
+            headers: const ['Cheque/Bill No', 'Date', 'Shop Name', 'Received Rs.', 'Balance Rs.'],
+            rows: recoveryBills.map((recovery) {
+              return [
+                recovery.chequeBillNo,
+                formatDateForUi(recovery.date),
+                state.shopName(recovery.shopkeeperId),
+                state.rs(recovery.receivedAmount),
+                state.rs(recovery.balanceAfter),
+              ];
+            }).toList(),
+            totalLabel: 'Total Recovery',
+            totalValue: state.rs(recoveryAmount),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _header() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(border: Border.all(color: Colors.black87)),
+      child: Column(
+        children: [
+          Text(
+            distributorName,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Load Form Settlement | DSR: $dsrName | Salesman: $salesmanName | Date: ${formatDateForUi(date)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class _SecondarySkuDraftRow {
+  String selectedProductId = '';
+  final skuController = TextEditingController();
+  final brandController = TextEditingController();
+  final skuCodeController = TextEditingController();
+  final cartonsController = TextEditingController(text: '0');
+  final unitsController = TextEditingController(text: '0');
+  final returnCartonsController = TextEditingController(text: '0');
+  final returnUnitsController = TextEditingController(text: '0');
+  final packController = TextEditingController(text: '24');
+  final packetSellController = TextEditingController(text: '0');
+  final companyPercentController = TextEditingController(text: '0');
+  final tradeOfferController = TextEditingController(text: '0');
+  final minStockController = TextEditingController(text: '0');
+
+  void dispose() {
+    skuController.dispose();
+    brandController.dispose();
+    skuCodeController.dispose();
+    cartonsController.dispose();
+    unitsController.dispose();
+    returnCartonsController.dispose();
+    returnUnitsController.dispose();
+    packController.dispose();
+    packetSellController.dispose();
+    companyPercentController.dispose();
+    tradeOfferController.dispose();
+    minStockController.dispose();
   }
 }
 
@@ -1605,7 +4821,8 @@ class _OrderBookingPageState extends State<OrderBookingPage> {
     final state = widget.state;
 
     final rows = state.sales.where((x) {
-      final dateOk = dateInRange(x.date, fromController.text, toController.text);
+      final dateOk =
+          dateInRange(x.date, fromController.text, toController.text);
       final dsrOk = dsrId.isEmpty || x.dsrId == dsrId;
       final shopOk = shopkeeperId.isEmpty || x.shopkeeperId == shopkeeperId;
       final productOk = productId.isEmpty || x.productId == productId;
@@ -1639,13 +4856,17 @@ class _OrderBookingPageState extends State<OrderBookingPage> {
             filterDropdown(
               label: 'Shopkeeper',
               value: shopkeeperId,
-              items: state.shopkeepers.map((x) => FilterOption(x.id, x.shopName)).toList(),
+              items: state.shopkeepers
+                  .map((x) => FilterOption(x.id, x.shopName))
+                  .toList(),
               onChanged: (value) => setState(() => shopkeeperId = value),
             ),
             filterDropdown(
               label: 'Product',
               value: productId,
-              items: state.products.map((x) => FilterOption(x.id, x.name)).toList(),
+              items: state.products
+                  .map((x) => FilterOption(x.id, x.name))
+                  .toList(),
               onChanged: (value) => setState(() => productId = value),
             ),
             filterDropdown(
@@ -1701,7 +4922,8 @@ class _RecoveryPageState extends State<RecoveryPage> {
     final state = widget.state;
 
     final rows = state.recoveries.where((x) {
-      final dateOk = dateInRange(x.date, fromController.text, toController.text);
+      final dateOk =
+          dateInRange(x.date, fromController.text, toController.text);
       final dsrOk = dsrId.isEmpty || x.dsrId == dsrId;
       final shopOk = shopkeeperId.isEmpty || x.shopkeeperId == shopkeeperId;
       return dateOk && dsrOk && shopOk;
@@ -1731,7 +4953,9 @@ class _RecoveryPageState extends State<RecoveryPage> {
             filterDropdown(
               label: 'Shopkeeper',
               value: shopkeeperId,
-              items: state.shopkeepers.map((x) => FilterOption(x.id, x.shopName)).toList(),
+              items: state.shopkeepers
+                  .map((x) => FilterOption(x.id, x.shopName))
+                  .toList(),
               onChanged: (value) => setState(() => shopkeeperId = value),
             ),
             clearFilterButton(() {
@@ -1778,7 +5002,8 @@ class _ExpensePageState extends State<ExpensePage> {
     final types = state.expenses.map((x) => x.type).toSet().toList();
 
     final rows = state.expenses.where((x) {
-      final dateOk = dateInRange(x.date, fromController.text, toController.text);
+      final dateOk =
+          dateInRange(x.date, fromController.text, toController.text);
       final dsrOk = dsrId.isEmpty || x.dsrId == dsrId;
       final typeOk = expenseType.isEmpty || x.type == expenseType;
       return dateOk && dsrOk && typeOk;
@@ -1788,7 +5013,8 @@ class _ExpensePageState extends State<ExpensePage> {
       children: [
         moduleHeader(
           title: 'Expenses',
-          subtitle: 'Fuel, office expense, advance payment, and other payments.',
+          subtitle:
+              'Fuel, office expense, advance payment, and other payments.',
           buttonText: 'Add Expense',
           icon: Icons.money_off_rounded,
           onTap: () => showExpenseDialog(context, state, widget.onChanged),
@@ -1852,9 +5078,12 @@ class _DepositPageState extends State<DepositPage> {
     final state = widget.state;
 
     final rows = state.deposits.where((x) {
-      final dateOk = dateInRange(x.date, fromController.text, toController.text);
+      final dateOk =
+          dateInRange(x.date, fromController.text, toController.text);
       final partyOk = partyController.text.trim().isEmpty ||
-          x.party.toLowerCase().contains(partyController.text.trim().toLowerCase());
+          x.party
+              .toLowerCase()
+              .contains(partyController.text.trim().toLowerCase());
       return dateOk && partyOk;
     }).toList();
 
@@ -1917,7 +5146,8 @@ class _ClaimPageState extends State<ClaimPage> {
     final types = state.claims.map((x) => x.type).toSet().toList();
 
     final rows = state.claims.where((x) {
-      final dateOk = dateInRange(x.date, fromController.text, toController.text);
+      final dateOk =
+          dateInRange(x.date, fromController.text, toController.text);
       final productOk = productId.isEmpty || x.productId == productId;
       final typeOk = claimType.isEmpty || x.type == claimType;
       return dateOk && productOk && typeOk;
@@ -1941,7 +5171,9 @@ class _ClaimPageState extends State<ClaimPage> {
             filterDropdown(
               label: 'Product',
               value: productId,
-              items: state.products.map((x) => FilterOption(x.id, x.name)).toList(),
+              items: state.products
+                  .map((x) => FilterOption(x.id, x.name))
+                  .toList(),
               onChanged: (value) => setState(() => productId = value),
             ),
             filterDropdown(
@@ -2002,35 +5234,40 @@ const List<_ReportItem> _reportItems = [
   _ReportItem(
     type: ReportType.dsrDailySales,
     title: 'DSR Daily Sales Report',
-    description: 'Daily DSR sales with bill, shop, product, cash and credit detail.',
+    description:
+        'Daily DSR sales with bill, shop, product, cash and credit detail.',
     icon: Icons.receipt_long_rounded,
     color: Colors.blue,
   ),
   _ReportItem(
     type: ReportType.dsrWiseSales,
     title: 'DSR-wise Sales Report',
-    description: 'Check sales grouped by booker / DSR and selected date filters.',
+    description:
+        'Check sales grouped by booker / DSR and selected date filters.',
     icon: Icons.badge_rounded,
     color: Colors.indigo,
   ),
   _ReportItem(
     type: ReportType.productWiseSales,
     title: 'Product-wise Sales',
-    description: 'See product sales, quantity, bill value, and selected date history.',
+    description:
+        'See product sales, quantity, bill value, and selected date history.',
     icon: Icons.inventory_2_rounded,
     color: Colors.deepPurple,
   ),
   _ReportItem(
     type: ReportType.shopkeeperCredit,
     title: 'Shopkeeper Credit Report',
-    description: 'Track credit bills, paid recovery, and remaining market credit.',
+    description:
+        'Track credit bills, paid recovery, and remaining market credit.',
     icon: Icons.store_rounded,
     color: Colors.orange,
   ),
   _ReportItem(
     type: ReportType.recovery,
     title: 'Recovery Report',
-    description: 'All recovered cash from shopkeepers with DSR and balance detail.',
+    description:
+        'All recovered cash from shopkeepers with DSR and balance detail.',
     icon: Icons.call_received_rounded,
     color: Colors.purple,
   ),
@@ -2044,7 +5281,8 @@ const List<_ReportItem> _reportItems = [
   _ReportItem(
     type: ReportType.deposit,
     title: 'Deposit Report',
-    description: 'Bank or party deposits with note denomination and total amount.',
+    description:
+        'Bank or party deposits with note denomination and total amount.',
     icon: Icons.account_balance_rounded,
     color: Colors.teal,
   ),
@@ -2065,7 +5303,8 @@ const List<_ReportItem> _reportItems = [
   _ReportItem(
     type: ReportType.stock,
     title: 'Stock Report',
-    description: 'Current product stock, cartons, batches, prices, and stock value.',
+    description:
+        'Current product stock, cartons, batches, prices, and stock value.',
     icon: Icons.warehouse_rounded,
     color: Colors.blueGrey,
   ),
@@ -2131,7 +5370,8 @@ class ReportsPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ReportDetailPage(state: state, item: item),
+                            builder: (_) =>
+                                ReportDetailPage(state: state, item: item),
                           ),
                         );
                       },
@@ -2149,7 +5389,8 @@ class ReportsPage extends StatelessWidget {
                                   child: Icon(item.icon, color: item.color),
                                 ),
                                 const Spacer(),
-                                Icon(Icons.arrow_forward_rounded, color: item.color),
+                                Icon(Icons.arrow_forward_rounded,
+                                    color: item.color),
                               ],
                             ),
                             const SizedBox(height: 14),
@@ -2229,8 +5470,12 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     final parts = clean.split('-');
     if (parts.length == 3) {
       final year = yearController.text.trim();
-      final month = monthController.text.trim().padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
-      final day = dayController.text.trim().padLeft(dayController.text.trim().isEmpty ? 0 : 2, '0');
+      final month = monthController.text
+          .trim()
+          .padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
+      final day = dayController.text
+          .trim()
+          .padLeft(dayController.text.trim().isEmpty ? 0 : 2, '0');
 
       if (year.isNotEmpty && parts[0] != year) return false;
       if (month.isNotEmpty && parts[1] != month) return false;
@@ -2247,13 +5492,19 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     }).toList();
   }
 
-  List<RecoveryEntry> filteredRecoveries() => state.recoveries.where((item) => dateOk(item.date)).toList();
-  List<ExpenseEntry> filteredExpenses() => state.expenses.where((item) => dateOk(item.date)).toList();
-  List<DepositEntry> filteredDeposits() => state.deposits.where((item) => dateOk(item.date)).toList();
-  List<ClaimEntry> filteredClaims() => state.claims.where((item) => dateOk(item.date)).toList();
-  List<CompanyPurchase> filteredPurchases() => state.companyPurchases.where((item) => dateOk(item.date)).toList();
+  List<RecoveryEntry> filteredRecoveries() =>
+      state.recoveries.where((item) => dateOk(item.date)).toList();
+  List<ExpenseEntry> filteredExpenses() =>
+      state.expenses.where((item) => dateOk(item.date)).toList();
+  List<DepositEntry> filteredDeposits() =>
+      state.deposits.where((item) => dateOk(item.date)).toList();
+  List<ClaimEntry> filteredClaims() =>
+      state.claims.where((item) => dateOk(item.date)).toList();
+  List<CompanyPurchase> filteredPurchases() =>
+      state.companyPurchases.where((item) => dateOk(item.date)).toList();
 
-  Widget filterInput(String label, TextEditingController controller, {double width = 150, bool number = false}) {
+  Widget filterInput(String label, TextEditingController controller,
+      {double width = 150, bool number = false}) {
     return SizedBox(
       width: width,
       child: TextField(
@@ -2275,32 +5526,48 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       case ReportType.productWiseSales:
         return filteredSales().fold<double>(0, (sum, item) => sum + item.total);
       case ReportType.shopkeeperCredit:
-        final credit = filteredSales(type: SaleType.credit).fold<double>(0, (sum, item) => sum + item.total);
-        final recovery = filteredRecoveries().fold<double>(0, (sum, item) => sum + item.receivedAmount);
+        final credit = filteredSales(type: SaleType.credit)
+            .fold<double>(0, (sum, item) => sum + item.total);
+        final recovery = filteredRecoveries()
+            .fold<double>(0, (sum, item) => sum + item.receivedAmount);
         return credit - recovery;
       case ReportType.recovery:
-        return filteredRecoveries().fold<double>(0, (sum, item) => sum + item.receivedAmount);
+        return filteredRecoveries()
+            .fold<double>(0, (sum, item) => sum + item.receivedAmount);
       case ReportType.cashIn:
-        final cash = filteredSales(type: SaleType.cash).fold<double>(0, (sum, item) => sum + item.total);
-        final recovery = filteredRecoveries().fold<double>(0, (sum, item) => sum + item.receivedAmount);
+        final cash = filteredSales(type: SaleType.cash)
+            .fold<double>(0, (sum, item) => sum + item.total);
+        final recovery = filteredRecoveries()
+            .fold<double>(0, (sum, item) => sum + item.receivedAmount);
         return cash + recovery;
       case ReportType.deposit:
-        return filteredDeposits().fold<double>(0, (sum, item) => sum + item.total);
+        return filteredDeposits()
+            .fold<double>(0, (sum, item) => sum + item.total);
       case ReportType.expense:
-        return filteredExpenses().fold<double>(0, (sum, item) => sum + item.amount);
+        return filteredExpenses()
+            .fold<double>(0, (sum, item) => sum + item.amount);
       case ReportType.claimExpiry:
-        return filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
+        return filteredClaims()
+            .fold<double>(0, (sum, item) => sum + item.amount);
       case ReportType.stock:
         return state.stockValue;
       case ReportType.lowStock:
-        return state.products.where((item) => item.warehouseStock <= item.lowStockLimit).fold<double>(0, (sum, item) => sum + (item.warehouseStock * item.purchasePrice));
+        return state.products
+            .where((item) => item.warehouseStock <= item.lowStockLimit)
+            .fold<double>(
+                0,
+                (sum, item) =>
+                    sum + (item.warehouseStock * item.purchasePrice));
       case ReportType.profitLoss:
         final saleProfit = filteredSales().fold<double>(0, (sum, sale) {
-          final cost = (state.productById(sale.productId)?.purchasePrice ?? 0) * sale.quantity;
+          final cost = (state.productById(sale.productId)?.purchasePrice ?? 0) *
+              sale.quantity;
           return sum + sale.total - cost;
         });
-        final expenses = filteredExpenses().fold<double>(0, (sum, item) => sum + item.amount);
-        final claims = filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
+        final expenses = filteredExpenses()
+            .fold<double>(0, (sum, item) => sum + item.amount);
+        final claims =
+            filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
         return saleProfit - expenses - claims;
     }
   }
@@ -2337,12 +5604,14 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                         children: [
                           Text(
                             'Filtered Total: ${state.rs(filteredTotal)}',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             widget.item.description,
-                            style: const TextStyle(color: Color(0xff6b7280), height: 1.4),
+                            style: const TextStyle(
+                                color: Color(0xff6b7280), height: 1.4),
                           ),
                         ],
                       ),
@@ -2362,7 +5631,8 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                   filterInput('From Date', fromController, width: 160),
                   filterInput('To Date', toController, width: 160),
                   filterInput('Day', dayController, width: 100, number: true),
-                  filterInput('Month', monthController, width: 110, number: true),
+                  filterInput('Month', monthController,
+                      width: 110, number: true),
                   filterInput('Year', yearController, width: 110, number: true),
                   clearFilterButton(() {
                     setState(() {
@@ -2413,86 +5683,142 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     }
   }
 
-  Widget reportTable({required String title, required List<String> headers, required List<List<String>> rows}) {
+  Widget reportTable(
+      {required String title,
+      required List<String> headers,
+      required List<List<String>> rows}) {
     return DataCard(
       title: title,
       child: rows.isEmpty
           ? emptyBox('No records found for selected filters.')
           : horizontalTable(
               DataTable(
-                columns: headers.map((header) => DataColumn(label: Text(header))).toList(),
-                rows: rows.map((row) => DataRow(cells: row.map((cell) => DataCell(Text(cell))).toList())).toList(),
+                columns: headers
+                    .map((header) => DataColumn(label: Text(header)))
+                    .toList(),
+                rows: rows
+                    .map((row) => DataRow(
+                        cells:
+                            row.map((cell) => DataCell(Text(cell))).toList()))
+                    .toList(),
               ),
             ),
     );
   }
 
   Widget groupedDsrSalesReport() {
-    final rows = state.dsrs.map((dsr) {
-      final sales = filteredSales().where((sale) => sale.dsrId == dsr.id).toList();
-      final cash = sales.where((sale) => sale.type == SaleType.cash).fold<double>(0, (sum, sale) => sum + sale.total);
-      final credit = sales.where((sale) => sale.type == SaleType.credit).fold<double>(0, (sum, sale) => sum + sale.total);
-      final total = sales.fold<double>(0, (sum, sale) => sum + sale.total);
-      return [
-        dsr.name,
-        dsr.route.isEmpty ? '-' : dsr.route,
-        sales.length.toString(),
-        state.rs(cash),
-        state.rs(credit),
-        state.rs(total),
-      ];
-    }).where((row) => row[2] != '0').toList();
+    final rows = state.dsrs
+        .map((dsr) {
+          final sales =
+              filteredSales().where((sale) => sale.dsrId == dsr.id).toList();
+          final cash = sales
+              .where((sale) => sale.type == SaleType.cash)
+              .fold<double>(0, (sum, sale) => sum + sale.total);
+          final credit = sales
+              .where((sale) => sale.type == SaleType.credit)
+              .fold<double>(0, (sum, sale) => sum + sale.total);
+          final total = sales.fold<double>(0, (sum, sale) => sum + sale.total);
+          return [
+            dsr.name,
+            dsr.route.isEmpty ? '-' : dsr.route,
+            sales.length.toString(),
+            state.rs(cash),
+            state.rs(credit),
+            state.rs(total),
+          ];
+        })
+        .where((row) => row[2] != '0')
+        .toList();
 
     return reportTable(
       title: 'DSR-wise Sales Summary',
-      headers: const ['Booker', 'Route', 'Bills', 'Cash Sale', 'Credit Sale', 'Total Sale'],
+      headers: const [
+        'Booker',
+        'Route',
+        'Bills',
+        'Cash Sale',
+        'Credit Sale',
+        'Total Sale'
+      ],
       rows: rows,
     );
   }
 
   Widget groupedProductSalesReport() {
-    final rows = state.products.map((product) {
-      final sales = filteredSales().where((sale) => sale.productId == product.id).toList();
-      final qty = sales.fold<int>(0, (sum, sale) => sum + sale.quantity);
-      final total = sales.fold<double>(0, (sum, sale) => sum + sale.total);
-      return [
-        product.name,
-        product.brand.isEmpty ? '-' : product.brand,
-        product.batchNo.isEmpty ? '-' : product.batchNo,
-        qty.toString(),
-        sales.length.toString(),
-        state.rs(total),
-      ];
-    }).where((row) => row[3] != '0').toList();
+    final rows = state.products
+        .map((product) {
+          final sales = filteredSales()
+              .where((sale) => sale.productId == product.id)
+              .toList();
+          final qty = sales.fold<int>(0, (sum, sale) => sum + sale.quantity);
+          final total = sales.fold<double>(0, (sum, sale) => sum + sale.total);
+          return [
+            product.name,
+            product.brand.isEmpty ? '-' : product.brand,
+            product.batchNo.isEmpty ? '-' : product.batchNo,
+            qty.toString(),
+            sales.length.toString(),
+            state.rs(total),
+          ];
+        })
+        .where((row) => row[3] != '0')
+        .toList();
 
     return reportTable(
       title: 'Product-wise Sales Summary',
-      headers: const ['Product', 'Brand', 'Batch', 'Qty Sold', 'Bills', 'Total Sale'],
+      headers: const [
+        'Product',
+        'Brand',
+        'Batch',
+        'Qty Sold',
+        'Bills',
+        'Total Sale'
+      ],
       rows: rows,
     );
   }
 
   Widget shopkeeperCreditReport() {
-    final rows = state.shopkeepers.map((shop) {
-      final creditSales = filteredSales(type: SaleType.credit).where((sale) => sale.shopkeeperId == shop.id).toList();
-      final recoveries = filteredRecoveries().where((recovery) => recovery.shopkeeperId == shop.id).toList();
-      final credit = creditSales.fold<double>(0, (sum, sale) => sum + sale.total);
-      final paid = recoveries.fold<double>(0, (sum, recovery) => sum + recovery.receivedAmount);
-      final balance = credit - paid;
-      return [
-        shop.shopName,
-        shop.ownerName.isEmpty ? '-' : shop.ownerName,
-        state.dsrName(shop.dsrId),
-        state.rs(credit),
-        state.rs(paid),
-        state.rs(balance),
-        state.rs(shop.pendingCredit),
-      ];
-    }).where((row) => row[3] != state.rs(0) || row[4] != state.rs(0) || row[6] != state.rs(0)).toList();
+    final rows = state.shopkeepers
+        .map((shop) {
+          final creditSales = filteredSales(type: SaleType.credit)
+              .where((sale) => sale.shopkeeperId == shop.id)
+              .toList();
+          final recoveries = filteredRecoveries()
+              .where((recovery) => recovery.shopkeeperId == shop.id)
+              .toList();
+          final credit =
+              creditSales.fold<double>(0, (sum, sale) => sum + sale.total);
+          final paid = recoveries.fold<double>(
+              0, (sum, recovery) => sum + recovery.receivedAmount);
+          final balance = credit - paid;
+          return [
+            shop.shopName,
+            shop.ownerName.isEmpty ? '-' : shop.ownerName,
+            state.dsrName(shop.dsrId),
+            state.rs(credit),
+            state.rs(paid),
+            state.rs(balance),
+            state.rs(shop.pendingCredit),
+          ];
+        })
+        .where((row) =>
+            row[3] != state.rs(0) ||
+            row[4] != state.rs(0) ||
+            row[6] != state.rs(0))
+        .toList();
 
     return reportTable(
       title: 'Shopkeeper Credit Summary',
-      headers: const ['Shop', 'Owner', 'Booker', 'Credit Added', 'Paid', 'Filter Balance', 'Current Balance'],
+      headers: const [
+        'Shop',
+        'Owner',
+        'Booker',
+        'Credit Added',
+        'Paid',
+        'Filter Balance',
+        'Current Balance'
+      ],
       rows: rows,
     );
   }
@@ -2539,14 +5865,30 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   Widget stockReport({required bool lowOnly}) {
     final products = lowOnly
-        ? state.products.where((product) => product.warehouseStock <= product.lowStockLimit).toList()
+        ? state.products
+            .where((product) => product.warehouseStock <= product.lowStockLimit)
+            .toList()
         : state.products;
 
     return reportTable(
       title: lowOnly ? 'Low Stock Products' : 'Current Stock Report',
-      headers: const ['Product', 'Brand', 'Batch', 'MFG', 'EXP', 'Packets', 'Per Carton', 'Cartons', 'Purchase', 'Selling', 'Value'],
+      headers: const [
+        'Product',
+        'Brand',
+        'Batch',
+        'MFG',
+        'EXP',
+        'Packets',
+        'Per Carton',
+        'Cartons',
+        'Purchase',
+        'Selling',
+        'Value'
+      ],
       rows: products.map((product) {
-        final cartons = product.packetsPerCarton <= 0 ? 0 : product.warehouseStock / product.packetsPerCarton;
+        final cartons = product.packetsPerCarton <= 0
+            ? 0
+            : product.warehouseStock / product.packetsPerCarton;
         final value = product.warehouseStock * product.purchasePrice;
         return [
           product.name,
@@ -2576,7 +5918,8 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       return sum + ((product?.purchasePrice ?? 0) * sale.quantity);
     });
     final grossProfit = saleTotal - costTotal;
-    final expenseTotal = expenses.fold<double>(0, (sum, item) => sum + item.amount);
+    final expenseTotal =
+        expenses.fold<double>(0, (sum, item) => sum + item.amount);
     final claimTotal = claims.fold<double>(0, (sum, item) => sum + item.amount);
     final netProfit = grossProfit - expenseTotal - claimTotal;
 
@@ -2597,7 +5940,15 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         const SizedBox(height: 18),
         reportTable(
           title: 'Sale Profit Detail',
-          headers: const ['Date', 'Bill No', 'Product', 'Qty', 'Sale Total', 'Cost', 'Profit'],
+          headers: const [
+            'Date',
+            'Bill No',
+            'Product',
+            'Qty',
+            'Sale Total',
+            'Cost',
+            'Profit'
+          ],
           rows: sales.map((sale) {
             final product = state.productById(sale.productId);
             final cost = (product?.purchasePrice ?? 0) * sale.quantity;
@@ -2618,12 +5969,23 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   }
 }
 
-
 class DsrReportPage extends StatefulWidget {
   final AppState state;
   final Future<void> Function() onChanged;
+  final String? initialDsrId;
+  final double initialReturnStockAmount;
+  final double initialExtraAmount;
+  final double initialPhysicalCash;
 
-  const DsrReportPage({super.key, required this.state, required this.onChanged});
+  const DsrReportPage({
+    super.key,
+    required this.state,
+    required this.onChanged,
+    this.initialDsrId,
+    this.initialReturnStockAmount = 0,
+    this.initialExtraAmount = 0,
+    this.initialPhysicalCash = 0,
+  });
 
   @override
   State<DsrReportPage> createState() => _DsrReportPageState();
@@ -2660,7 +6022,27 @@ class _DsrReportPageState extends State<DsrReportPage> {
   void initState() {
     super.initState();
     selectedDate = widget.state.today;
-    if (widget.state.dsrs.isNotEmpty) selectedDsrId = widget.state.dsrs.first.id;
+    selectedDsrId = widget.initialDsrId;
+    if ((selectedDsrId == null || selectedDsrId!.isEmpty) &&
+        widget.state.dsrs.isNotEmpty) {
+      selectedDsrId = widget.state.dsrs.first.id;
+    }
+    returnStockController.text = widget.initialReturnStockAmount
+        .toStringAsFixed(widget.initialReturnStockAmount ==
+                widget.initialReturnStockAmount.roundToDouble()
+            ? 0
+            : 2);
+    extraAmountController.text = widget.initialExtraAmount.toStringAsFixed(
+        widget.initialExtraAmount == widget.initialExtraAmount.roundToDouble()
+            ? 0
+            : 2);
+    if (widget.initialPhysicalCash > 0) {
+      coinsController.text = widget.initialPhysicalCash.toStringAsFixed(
+          widget.initialPhysicalCash ==
+                  widget.initialPhysicalCash.roundToDouble()
+              ? 0
+              : 2);
+    }
   }
 
   @override
@@ -2668,7 +6050,16 @@ class _DsrReportPageState extends State<DsrReportPage> {
     final state = widget.state;
 
     if (state.dsrs.isEmpty) {
-      return DataCard(title: 'DSR Daily Report', child: emptyBox('Add DSR first.'));
+      final empty = DataCard(
+          title: 'DSR Daily Report', child: emptyBox('Add DSR first.'));
+      final isFullPageRoute = ModalRoute.of(context)?.canPop == true;
+      if (!isFullPageRoute) return empty;
+      return Scaffold(
+        backgroundColor: AppTheme.softBg,
+        body: SafeArea(
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.all(18), child: empty)),
+      );
     }
 
     selectedDsrId ??= state.dsrs.first.id;
@@ -2681,10 +6072,13 @@ class _DsrReportPageState extends State<DsrReportPage> {
       physicalCash: physicalCash,
     );
 
-    final creditBills = state.salesFor(selectedDsrId!, selectedDate).where((x) => x.type == SaleType.credit).toList();
+    final creditBills = state
+        .salesFor(selectedDsrId!, selectedDate)
+        .where((x) => x.type == SaleType.credit)
+        .toList();
     final recoveryBills = state.recoveriesFor(selectedDsrId!, selectedDate);
 
-    return Column(
+    final content = Column(
       children: [
         DataCard(
           title: 'DSR Daily Report Controls',
@@ -2697,7 +6091,10 @@ class _DsrReportPageState extends State<DsrReportPage> {
                 child: DropdownButtonFormField<String>(
                   value: selectedDsrId,
                   decoration: const InputDecoration(labelText: 'Select DSR'),
-                  items: state.dsrs.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+                  items: state.dsrs
+                      .map((x) =>
+                          DropdownMenuItem(value: x.id, child: Text(x.name)))
+                      .toList(),
                   onChanged: (value) => setState(() => selectedDsrId = value),
                 ),
               ),
@@ -2714,7 +6111,8 @@ class _DsrReportPageState extends State<DsrReportPage> {
                 child: TextField(
                   controller: returnStockController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Return Stock Amount'),
+                  decoration:
+                      const InputDecoration(labelText: 'Return Stock Amount'),
                   onChanged: (_) => setState(() {}),
                 ),
               ),
@@ -2804,10 +6202,44 @@ class _DsrReportPageState extends State<DsrReportPage> {
         const SizedBox(height: 18),
         responsiveTwo(reportCard(report), denominationCard()),
         const SizedBox(height: 18),
-        detailTable('Detail of Credit Bills', const ['Bill No', 'Date', 'Shop Name', 'Amount'], creditBills.map((x) => [x.billNo, x.date, state.shopName(x.shopkeeperId), state.rs(x.total)]).toList()),
+        detailTable(
+            'Detail of Credit Bills',
+            const ['Bill No', 'Date', 'Shop Name', 'Amount'],
+            creditBills
+                .map((x) => [
+                      x.billNo,
+                      x.date,
+                      state.shopName(x.shopkeeperId),
+                      state.rs(x.total)
+                    ])
+                .toList()),
         const SizedBox(height: 18),
-        detailTable('Detail of Recovery Bills', const ['Bill No', 'Date', 'Shop Name', 'Received', 'Balance'], recoveryBills.map((x) => [x.chequeBillNo, x.date, state.shopName(x.shopkeeperId), state.rs(x.receivedAmount), state.rs(x.balanceAfter)]).toList()),
+        detailTable(
+            'Detail of Recovery Bills',
+            const ['Bill No', 'Date', 'Shop Name', 'Received', 'Balance'],
+            recoveryBills
+                .map((x) => [
+                      x.chequeBillNo,
+                      x.date,
+                      state.shopName(x.shopkeeperId),
+                      state.rs(x.receivedAmount),
+                      state.rs(x.balanceAfter)
+                    ])
+                .toList()),
       ],
+    );
+
+    final isFullPageRoute = ModalRoute.of(context)?.canPop == true;
+    if (!isFullPageRoute) return content;
+
+    return Scaffold(
+      backgroundColor: AppTheme.softBg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: content,
+        ),
+      ),
     );
   }
 
@@ -2828,7 +6260,8 @@ class _DsrReportPageState extends State<DsrReportPage> {
           calcRow('Net Cash Sale', report.netCashSale, bold: true),
           calcRow('Plus Recovery', report.recovery),
           const Divider(),
-          calcRow('Total DSR Cash', report.totalDsrCash, bold: true, color: AppTheme.primary),
+          calcRow('Total DSR Cash', report.totalDsrCash,
+              bold: true, color: AppTheme.primary),
           calcRow('Physical Cash', report.physicalCash),
           calcRow('Short', report.shortAmount, color: Colors.red),
           calcRow('Excess', report.excessAmount, color: Colors.green),
@@ -2849,20 +6282,30 @@ class _DsrReportPageState extends State<DsrReportPage> {
           cashRow('50', note50Controller, 50),
           cashRow('20', note20Controller, 20),
           cashRow('10', note10Controller, 10),
-          textInput(label: 'Coins', controller: coinsController, number: true, onChanged: (_) => setState(() {})),
+          textInput(
+              label: 'Coins',
+              controller: coinsController,
+              number: true,
+              onChanged: (_) => setState(() {})),
           const SizedBox(height: 12),
-          Text('Total Physical Cash: ${widget.state.rs(physicalCash)}', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary)),
+          Text('Total Physical Cash: ${widget.state.rs(physicalCash)}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w900, color: AppTheme.primary)),
         ],
       ),
     );
   }
 
-  Widget cashRow(String title, TextEditingController controller, int noteValue) {
+  Widget cashRow(
+      String title, TextEditingController controller, int noteValue) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          SizedBox(width: 70, child: Text(title, style: const TextStyle(fontWeight: FontWeight.w800))),
+          SizedBox(
+              width: 70,
+              child: Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.w800))),
           const Text('x'),
           const SizedBox(width: 10),
           SizedBox(
@@ -2870,24 +6313,34 @@ class _DsrReportPageState extends State<DsrReportPage> {
             child: TextField(
               controller: controller,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(isDense: true, labelText: 'Count'),
+              decoration:
+                  const InputDecoration(isDense: true, labelText: 'Count'),
               onChanged: (_) => setState(() {}),
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text('= ${widget.state.rs(toInt(controller.text) * noteValue.toDouble())}')),
+          Expanded(
+              child: Text(
+                  '= ${widget.state.rs(toInt(controller.text) * noteValue.toDouble())}')),
         ],
       ),
     );
   }
 
-  Widget calcRow(String title, double value, {bool bold = false, Color? color}) {
+  Widget calcRow(String title, double value,
+      {bool bold = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: TextStyle(fontWeight: bold ? FontWeight.w900 : FontWeight.w500))),
-          Text(widget.state.rs(value), style: TextStyle(fontWeight: bold ? FontWeight.w900 : FontWeight.w700, color: color)),
+          Expanded(
+              child: Text(title,
+                  style: TextStyle(
+                      fontWeight: bold ? FontWeight.w900 : FontWeight.w500))),
+          Text(widget.state.rs(value),
+              style: TextStyle(
+                  fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
+                  color: color)),
         ],
       ),
     );
@@ -2904,13 +6357,17 @@ Widget tablePage({
 }) {
   return Column(
     children: [
-      moduleHeader(title: title, subtitle: subtitle, buttonText: buttonText, icon: icon, onTap: onTap),
+      moduleHeader(
+          title: title,
+          subtitle: subtitle,
+          buttonText: buttonText,
+          icon: icon,
+          onTap: onTap),
       const SizedBox(height: 18),
       DataCard(title: '$title List', child: horizontalTable(table)),
     ],
   );
 }
-
 
 Widget moduleHeader({
   required String title,
@@ -2940,7 +6397,8 @@ Widget moduleHeader({
   );
 }
 
-Widget detailTable(String title, List<String> headers, List<List<String>> rows) {
+Widget detailTable(
+    String title, List<String> headers, List<List<String>> rows) {
   return DataCard(
     title: title,
     child: rows.isEmpty
@@ -2948,12 +6406,14 @@ Widget detailTable(String title, List<String> headers, List<List<String>> rows) 
         : horizontalTable(
             DataTable(
               columns: headers.map((x) => DataColumn(label: Text(x))).toList(),
-              rows: rows.map((row) => DataRow(cells: row.map((cell) => DataCell(Text(cell))).toList())).toList(),
+              rows: rows
+                  .map((row) => DataRow(
+                      cells: row.map((cell) => DataCell(Text(cell))).toList()))
+                  .toList(),
             ),
           ),
   );
 }
-
 
 Widget productTable(
   AppState state, {
@@ -2964,80 +6424,74 @@ Widget productTable(
     title: 'Primary Receiving Products',
     child: state.products.isEmpty
         ? emptyBox('No primary receiving products found.')
-        : horizontalTable(
-            DataTable(
-              columnSpacing: 12,
-              horizontalMargin: 6,
-              dataRowMinHeight: 50,
-              dataRowMaxHeight: 64,
-              headingRowHeight: 44,
-              columns: const [
-                DataColumn(label: Text('Product')),
-                DataColumn(label: Text('Brand')),
-                DataColumn(label: Text('Batch')),
-                DataColumn(label: Text('MFG')),
-                DataColumn(label: Text('EXP')),
-                DataColumn(label: Text('Pack')),
-                DataColumn(label: Text('Packet Buy')),
-                DataColumn(label: Text('Packet Sell')),
-                DataColumn(label: Text('Carton Sell')),
-                DataColumn(label: Text('Stock Packets')),
-                DataColumn(label: Text('Stock Cartons')),
-                DataColumn(label: Text('Company Disc.')),
-                DataColumn(label: Text('Trade Disc.')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Actions')),
-              ],
-              rows: state.products.map((x) {
-                final low = x.warehouseStock <= x.lowStockLimit;
-                final cartons = x.packetsPerCarton <= 0 ? 0 : x.warehouseStock / x.packetsPerCarton;
+        : LayoutBuilder(
+            builder: (contextBuilder, constraints) {
+              final table = DataTable(
+                columnSpacing: 18,
+                horizontalMargin: 8,
+                dataRowMinHeight: 50,
+                dataRowMaxHeight: 58,
+                headingRowHeight: 44,
+                columns: const [
+                  DataColumn(label: Text('Product')),
+                  DataColumn(label: Text('Brand')),
+                  DataColumn(label: Text('Pack')),
+                  DataColumn(label: Text('Packet Buy')),
+                  DataColumn(label: Text('Stock Cartons')),
+                  DataColumn(label: Text('Actions')),
+                ],
+                rows: state.products.map((x) {
+                  final cartons = x.packetsPerCarton <= 0
+                      ? 0
+                      : x.warehouseStock / x.packetsPerCarton;
 
-                return DataRow(
-                  cells: [
-                    DataCell(SizedBox(width: 120, child: Text(x.name, overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 88, child: Text(x.brand.isEmpty ? '-' : x.brand, overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 92, child: Text(x.batchNo.isEmpty ? '-' : x.batchNo, overflow: TextOverflow.ellipsis))),
-                    DataCell(Text(formatDateForUi(x.mfgDate))),
-                    DataCell(Text(formatDateForUi(x.expDate))),
-                    DataCell(Text('1 carton = ${x.packetsPerCarton}')),
-                    DataCell(Text(state.rs(x.purchasePrice))),
-                    DataCell(Text(state.rs(x.sellingPrice))),
-                    DataCell(Text(state.rs(x.cartonSellingPrice))),
-                    DataCell(Text(x.warehouseStock.toString())),
-                    DataCell(Text(cartons.toStringAsFixed(cartons == cartons.roundToDouble() ? 0 : 1))),
-                    DataCell(Text(state.rs(x.companyDiscount))),
-                    DataCell(Text(state.rs(x.tradeDiscount))),
-                    DataCell(
-                      Chip(
-                        label: Text(low ? 'Low' : 'Avail'),
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        backgroundColor: low
-                            ? const Color(0xffffe4e6)
-                            : const Color(0xffdcfce7),
-                      ),
-                    ),
-                    DataCell(
-                      context == null || onChanged == null
-                          ? const Text('-')
-                          : SizedBox(
-                              width: 76,
-                              child: actionButtons(
-                                onEdit: () => showProductDialog(context, state, onChanged, editItem: x),
-                                onDelete: () => confirmDelete(
-                                  context: context,
-                                  title: 'Delete Product',
-                                  message: 'Are you sure you want to delete this product? This is only allowed when no stock, load, or sales are linked.',
-                                  action: () => state.service.deleteProduct(x.id),
-                                  onChanged: onChanged,
+                  return DataRow(
+                    cells: [
+                      DataCell(SizedBox(
+                          width: 180,
+                          child:
+                              Text(x.name, overflow: TextOverflow.ellipsis))),
+                      DataCell(SizedBox(
+                          width: 130,
+                          child: Text(x.brand.isEmpty ? '-' : x.brand,
+                              overflow: TextOverflow.ellipsis))),
+                      DataCell(SizedBox(
+                          width: 110,
+                          child: Text('1 carton = ${x.packetsPerCarton}',
+                              overflow: TextOverflow.ellipsis))),
+                      DataCell(Text(state.rs(x.purchasePrice))),
+                      DataCell(Text(cartons.toStringAsFixed(
+                          cartons == cartons.roundToDouble() ? 0 : 1))),
+                      DataCell(
+                        context == null || onChanged == null
+                            ? const Text('-')
+                            : SizedBox(
+                                width: 64,
+                                child: actionButtons(
+                                  onEdit: () => showProductDialog(
+                                      context, state, onChanged,
+                                      editItem: x),
+                                  onDelete: () => confirmDelete(
+                                    context: context,
+                                    title: 'Delete Product',
+                                    message:
+                                        'Are you sure you want to delete this product? This is only allowed when no stock, load, or sales are linked.',
+                                    action: () =>
+                                        state.service.deleteProduct(x.id),
+                                    onChanged: onChanged,
+                                  ),
                                 ),
                               ),
-                            ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              );
+
+              return constraints.maxWidth < 760
+                  ? horizontalTable(table)
+                  : table;
+            },
           ),
   );
 }
@@ -3047,9 +6501,21 @@ Widget purchaseSummaryCards(AppState state) {
     spacing: 14,
     runSpacing: 14,
     children: [
-      StatCard(title: 'Purchase Total', value: state.rs(state.purchaseTotal), icon: Icons.receipt_long_rounded, color: Colors.indigo),
-      StatCard(title: 'Company Payable', value: state.rs(state.companyPayable), icon: Icons.account_balance_rounded, color: Colors.red),
-      StatCard(title: 'Purchase Entries', value: state.companyPurchases.length.toString(), icon: Icons.inventory_2_rounded, color: Colors.green),
+      StatCard(
+          title: 'Purchase Total',
+          value: state.rs(state.purchaseTotal),
+          icon: Icons.receipt_long_rounded,
+          color: Colors.indigo),
+      StatCard(
+          title: 'Company Payable',
+          value: state.rs(state.companyPayable),
+          icon: Icons.account_balance_rounded,
+          color: Colors.red),
+      StatCard(
+          title: 'Purchase Entries',
+          value: state.companyPurchases.length.toString(),
+          icon: Icons.inventory_2_rounded,
+          color: Colors.green),
     ],
   );
 }
@@ -3086,20 +6552,73 @@ Widget companyPurchaseTable(AppState state, {BuildContext? context}) {
               rows: state.companyPurchases.map((x) {
                 final gross = x.totalPackets * x.packetPurchasePrice;
                 return DataRow(cells: [
-                  DataCell(SizedBox(width: 72, child: Text(formatDateForUi(x.date), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 46, child: Text(x.invoiceNo.isEmpty ? '-' : x.invoiceNo, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 82, child: Text(x.companyName.isEmpty ? '-' : x.companyName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 108, child: Text(state.productName(x.productId), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 48, child: Text(x.batchNo.isEmpty ? '-' : x.batchNo, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 36, child: Text(x.cartons.toString(), style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 38, child: Text(x.packetsPerCarton.toString(), style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 44, child: Text(x.totalPackets.toString(), style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 58, child: Text(state.rs(x.packetPurchasePrice), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 62, child: Text(state.rs(gross), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 50, child: Text(state.rs(x.companyDiscount), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 62, child: Text(state.rs(x.totalBill), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 58, child: Text(state.rs(x.paidAmount), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 58, child: Text(state.rs(x.remainingAmount), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 72,
+                      child: Text(formatDateForUi(x.date),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 46,
+                      child: Text(x.invoiceNo.isEmpty ? '-' : x.invoiceNo,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 82,
+                      child: Text(x.companyName.isEmpty ? '-' : x.companyName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 108,
+                      child: Text(state.productName(x.productId),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 48,
+                      child: Text(x.batchNo.isEmpty ? '-' : x.batchNo,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 36,
+                      child: Text(x.cartons.toString(),
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 38,
+                      child: Text(x.packetsPerCarton.toString(),
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 44,
+                      child: Text(x.totalPackets.toString(),
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 58,
+                      child: Text(state.rs(x.packetPurchasePrice),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 62,
+                      child: Text(state.rs(gross),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 50,
+                      child: Text(state.rs(x.companyDiscount),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 62,
+                      child: Text(state.rs(x.totalBill),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 58,
+                      child: Text(state.rs(x.paidAmount),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(
+                      width: 58,
+                      child: Text(state.rs(x.remainingAmount),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)))),
                   DataCell(
                     SizedBox(
                       width: 38,
@@ -3109,8 +6628,10 @@ Widget companyPurchaseTable(AppState state, {BuildContext? context}) {
                               padding: EdgeInsets.zero,
                               visualDensity: VisualDensity.compact,
                               tooltip: 'View invoice',
-                              icon: const Icon(Icons.receipt_long_rounded, color: AppTheme.primary, size: 20),
-                              onPressed: () => showCompanyInvoicePreview(context, state, x),
+                              icon: const Icon(Icons.receipt_long_rounded,
+                                  color: AppTheme.primary, size: 20),
+                              onPressed: () =>
+                                  showCompanyInvoicePreview(context, state, x),
                             ),
                     ),
                   ),
@@ -3120,7 +6641,6 @@ Widget companyPurchaseTable(AppState state, {BuildContext? context}) {
           ),
   );
 }
-
 
 Widget salesTable(AppState state, {List<SaleEntry>? rows}) {
   final data = rows ?? state.sales;
@@ -3150,15 +6670,40 @@ Widget salesTable(AppState state, {List<SaleEntry>? rows}) {
               rows: data.map((x) {
                 return DataRow(
                   cells: [
-                    DataCell(SizedBox(width: 82, child: Text(x.billNo, overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 92, child: Text(formatDateForUi(x.date), overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 110, child: Text(state.dsrName(x.dsrId), overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 130, child: Text(state.shopName(x.shopkeeperId), overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 130, child: Text(state.productName(x.productId), overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 42, child: Text(x.quantity.toString()))),
-                    DataCell(SizedBox(width: 70, child: Text(state.rs(x.price), overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 58, child: Text(x.type == SaleType.cash ? 'Cash' : 'Credit', overflow: TextOverflow.ellipsis))),
-                    DataCell(SizedBox(width: 82, child: Text(state.rs(x.total), overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 82,
+                        child:
+                            Text(x.billNo, overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 92,
+                        child: Text(formatDateForUi(x.date),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 110,
+                        child: Text(state.dsrName(x.dsrId),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 130,
+                        child: Text(state.shopName(x.shopkeeperId),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 130,
+                        child: Text(state.productName(x.productId),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 42, child: Text(x.quantity.toString()))),
+                    DataCell(SizedBox(
+                        width: 70,
+                        child: Text(state.rs(x.price),
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 58,
+                        child: Text(x.type == SaleType.cash ? 'Cash' : 'Credit',
+                            overflow: TextOverflow.ellipsis))),
+                    DataCell(SizedBox(
+                        width: 82,
+                        child: Text(state.rs(x.total),
+                            overflow: TextOverflow.ellipsis))),
                   ],
                 );
               }).toList(),
@@ -3311,9 +6856,6 @@ Widget claimTable(AppState state, {List<ClaimEntry>? rows}) {
   );
 }
 
-
-
-
 class CashDenominationRow {
   final String note;
   final int count;
@@ -3356,7 +6898,8 @@ void showDsrPrintPreview({
                     const Expanded(
                       child: Text(
                         'DSR Daily Report Print Preview',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w900),
                       ),
                     ),
                     ElevatedButton.icon(
@@ -3367,7 +6910,8 @@ void showDsrPrintPreview({
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                      icon:
+                          const Icon(Icons.close_rounded, color: Colors.white),
                     ),
                   ],
                 ),
@@ -3424,7 +6968,8 @@ class DsrPrintableReport extends StatelessWidget {
               children: [
                 Text(
                   state.company?.name ?? 'Smart Account Manager',
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                  style: const TextStyle(
+                      fontSize: 26, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -3456,12 +7001,19 @@ class DsrPrintableReport extends StatelessWidget {
               ];
             }).toList(),
             totalLabel: 'Total Amount',
-            totalValue: state.rs(creditBills.fold(0.0, (sum, item) => sum + item.total)),
+            totalValue: state
+                .rs(creditBills.fold(0.0, (sum, item) => sum + item.total)),
           ),
           const SizedBox(height: 18),
           printTable(
             title: 'Detail of Recovery Bills',
-            headers: const ['Cheque/Bill No', 'Date', 'Shop Name', 'Received Rs.', 'Balance Rs.'],
+            headers: const [
+              'Cheque/Bill No',
+              'Date',
+              'Shop Name',
+              'Received Rs.',
+              'Balance Rs.'
+            ],
             rows: recoveryBills.map((x) {
               return [
                 x.chequeBillNo,
@@ -3472,7 +7024,8 @@ class DsrPrintableReport extends StatelessWidget {
               ];
             }).toList(),
             totalLabel: 'Total Recovery',
-            totalValue: state.rs(recoveryBills.fold(0.0, (sum, item) => sum + item.receivedAmount)),
+            totalValue: state.rs(recoveryBills.fold(
+                0.0, (sum, item) => sum + item.receivedAmount)),
           ),
         ],
       ),
@@ -3513,7 +7066,8 @@ class DsrPrintableReport extends StatelessWidget {
         ];
       }).toList(),
       totalLabel: 'Total DSR Cash',
-      totalValue: state.rs(cashRows.fold(0.0, (sum, item) => sum + item.amount)),
+      totalValue:
+          state.rs(cashRows.fold(0.0, (sum, item) => sum + item.amount)),
     );
   }
 }
@@ -3527,7 +7081,8 @@ Widget printTable({
 }) {
   final safeRows = rows.isEmpty
       ? [
-          List.generate(headers.length, (index) => index == 0 ? 'No record' : '-')
+          List.generate(
+              headers.length, (index) => index == 0 ? 'No record' : '-')
         ]
       : rows;
 
@@ -3582,11 +7137,11 @@ Widget printCell(String text, {bool bold = false}) {
     padding: const EdgeInsets.all(7),
     child: Text(
       text,
-      style: TextStyle(fontWeight: bold ? FontWeight.w900 : FontWeight.w500, fontSize: 12),
+      style: TextStyle(
+          fontWeight: bold ? FontWeight.w900 : FontWeight.w500, fontSize: 12),
     ),
   );
 }
-
 
 class FilterOption {
   final String value;
@@ -3663,7 +7218,8 @@ Widget filterDropdown({
       decoration: InputDecoration(labelText: label),
       items: [
         const DropdownMenuItem(value: '', child: Text('All')),
-        ...items.map((x) => DropdownMenuItem(value: x.value, child: Text(x.label))),
+        ...items
+            .map((x) => DropdownMenuItem(value: x.value, child: Text(x.label))),
       ],
       onChanged: (newValue) => onChanged(newValue ?? ''),
     ),
@@ -3684,11 +7240,6 @@ Widget clearFilterButton(VoidCallback onPressed) {
 void printCurrentPage() {
   html.window.print();
 }
-
-
-
-
-
 
 Future<void> runAction(
   BuildContext context,
@@ -3722,23 +7273,36 @@ Widget actionButtons({
   return Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      IconButton(
-        tooltip: 'Edit',
-        onPressed: onEdit,
-        icon: const Icon(Icons.edit_rounded, color: AppTheme.primary),
+      SizedBox(
+        width: 30,
+        height: 30,
+        child: IconButton(
+          tooltip: 'Edit',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+          onPressed: onEdit,
+          icon:
+              const Icon(Icons.edit_rounded, color: AppTheme.primary, size: 16),
+        ),
       ),
-      IconButton(
-        tooltip: onDelete == null ? 'Delete disabled' : 'Delete',
-        onPressed: onDelete,
-        icon: Icon(
-          Icons.delete_rounded,
-          color: onDelete == null ? const Color(0xff9ca3af) : Colors.red,
+      SizedBox(
+        width: 30,
+        height: 30,
+        child: IconButton(
+          tooltip: onDelete == null ? 'Delete disabled' : 'Delete',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+          onPressed: onDelete,
+          icon: Icon(
+            Icons.delete_rounded,
+            size: 16,
+            color: onDelete == null ? const Color(0xff9ca3af) : Colors.red,
+          ),
         ),
       ),
     ],
   );
 }
-
 
 Future<void> confirmDelete({
   required BuildContext context,
@@ -3777,10 +7341,13 @@ Future<void> confirmDelete({
   await runAction(context, action, onChanged);
 }
 
-void showSupplierDialog(BuildContext context, AppState state, Future<void> Function() onChanged, {Supplier? editItem}) {
+void showSupplierDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged,
+    {Supplier? editItem}) {
   final nameController = TextEditingController(text: editItem?.name ?? '');
   final phoneController = TextEditingController(text: editItem?.phone ?? '');
-  final addressController = TextEditingController(text: editItem?.address ?? '');
+  final addressController =
+      TextEditingController(text: editItem?.address ?? '');
 
   simpleDialog(
     context: context,
@@ -3812,7 +7379,9 @@ void showSupplierDialog(BuildContext context, AppState state, Future<void> Funct
   );
 }
 
-void showDsrDialog(BuildContext context, AppState state, Future<void> Function() onChanged, {Dsr? editItem}) {
+void showDsrDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged,
+    {Dsr? editItem}) {
   if (state.suppliers.isEmpty) {
     showSnack(context, 'Add salesman first.');
     return;
@@ -3821,7 +7390,8 @@ void showDsrDialog(BuildContext context, AppState state, Future<void> Function()
   final nameController = TextEditingController(text: editItem?.name ?? '');
   final phoneController = TextEditingController(text: editItem?.phone ?? '');
   final routeController = TextEditingController(text: editItem?.route ?? '');
-  final salaryController = TextEditingController(text: editItem?.salary.toStringAsFixed(0) ?? '');
+  final salaryController =
+      TextEditingController(text: editItem?.salary.toStringAsFixed(0) ?? '');
 
   String supplierId = editItem?.supplierId ?? state.suppliers.first.id;
 
@@ -3836,8 +7406,11 @@ void showDsrDialog(BuildContext context, AppState state, Future<void> Function()
         DropdownButtonFormField<String>(
           value: supplierId,
           decoration: const InputDecoration(labelText: 'Assigned Salesman'),
-          items: state.suppliers.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
-          onChanged: (value) => setDialog(() => supplierId = value ?? supplierId),
+          items: state.suppliers
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
+          onChanged: (value) =>
+              setDialog(() => supplierId = value ?? supplierId),
         ),
         textInput(label: 'Salary', controller: salaryController, number: true),
       ];
@@ -3868,14 +7441,17 @@ void showDsrDialog(BuildContext context, AppState state, Future<void> Function()
   );
 }
 
-void showShopDialog(BuildContext context, AppState state, Future<void> Function() onChanged, {Shopkeeper? editItem}) {
+void showShopDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged,
+    {Shopkeeper? editItem}) {
   if (state.dsrs.isEmpty) {
     showSnack(context, 'Add DSR first.');
     return;
   }
 
   final shopController = TextEditingController(text: editItem?.shopName ?? '');
-  final ownerController = TextEditingController(text: editItem?.ownerName ?? '');
+  final ownerController =
+      TextEditingController(text: editItem?.ownerName ?? '');
   final phoneController = TextEditingController(text: editItem?.phone ?? '');
   final areaController = TextEditingController(text: editItem?.area ?? '');
 
@@ -3893,7 +7469,9 @@ void showShopDialog(BuildContext context, AppState state, Future<void> Function(
         DropdownButtonFormField<String>(
           value: dsrId,
           decoration: const InputDecoration(labelText: 'Assigned DSR'),
-          items: state.dsrs.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+          items: state.dsrs
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
           onChanged: (value) => setDialog(() => dsrId = value ?? dsrId),
         ),
       ];
@@ -3924,21 +7502,37 @@ void showShopDialog(BuildContext context, AppState state, Future<void> Function(
   );
 }
 
-void showProductDialog(BuildContext context, AppState state, Future<void> Function() onChanged, {Product? editItem}) {
-  final nameController = TextEditingController(text: editItem?.name ?? 'Eclairs Chocolate');
-  final skuController = TextEditingController(text: editItem?.sku ?? 'ECL-${state.products.length + 1}');
-  final categoryController = TextEditingController(text: editItem?.category ?? 'Confectionery');
-  final brandController = TextEditingController(text: editItem?.brand ?? 'Cadbury');
-  final batchController = TextEditingController(text: editItem?.batchNo ?? 'ECL-160626');
-  final mfgController = TextEditingController(text: editItem?.mfgDate ?? '2026-06-16');
-  final expController = TextEditingController(text: editItem?.expDate ?? '2027-08-21');
-  final packetsController = TextEditingController(text: editItem?.packetsPerCarton.toString() ?? '24');
-  final purchaseController = TextEditingController(text: editItem?.purchasePrice.toStringAsFixed(0) ?? '189');
-  final sellingController = TextEditingController(text: editItem?.sellingPrice.toStringAsFixed(0) ?? '189');
-  final stockController = TextEditingController(text: editItem?.warehouseStock.toString() ?? '0');
-  final lowController = TextEditingController(text: editItem?.lowStockLimit.toString() ?? '24');
-  final companyDiscountController = TextEditingController(text: editItem?.companyDiscount.toStringAsFixed(0) ?? '0');
-  final tradeDiscountController = TextEditingController(text: editItem?.tradeDiscount.toStringAsFixed(0) ?? '0');
+void showProductDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged,
+    {Product? editItem}) {
+  final nameController =
+      TextEditingController(text: editItem?.name ?? 'Eclairs Chocolate');
+  final skuController = TextEditingController(
+      text: editItem?.sku ?? 'ECL-${state.products.length + 1}');
+  final categoryController =
+      TextEditingController(text: editItem?.category ?? 'Confectionery');
+  final brandController =
+      TextEditingController(text: editItem?.brand ?? 'Cadbury');
+  final batchController =
+      TextEditingController(text: editItem?.batchNo ?? 'ECL-160626');
+  final mfgController =
+      TextEditingController(text: editItem?.mfgDate ?? '2026-06-16');
+  final expController =
+      TextEditingController(text: editItem?.expDate ?? '2027-08-21');
+  final packetsController = TextEditingController(
+      text: editItem?.packetsPerCarton.toString() ?? '24');
+  final purchaseController = TextEditingController(
+      text: editItem?.purchasePrice.toStringAsFixed(0) ?? '189');
+  final sellingController = TextEditingController(
+      text: editItem?.sellingPrice.toStringAsFixed(0) ?? '189');
+  final stockController =
+      TextEditingController(text: editItem?.warehouseStock.toString() ?? '0');
+  final lowController =
+      TextEditingController(text: editItem?.lowStockLimit.toString() ?? '24');
+  final companyDiscountController = TextEditingController(
+      text: editItem?.companyDiscount.toStringAsFixed(0) ?? '0');
+  final tradeDiscountController = TextEditingController(
+      text: editItem?.tradeDiscount.toStringAsFixed(0) ?? '0');
 
   simpleDialog(
     context: context,
@@ -3958,13 +7552,34 @@ void showProductDialog(BuildContext context, AppState state, Future<void> Functi
       textInput(label: 'Batch No', controller: batchController),
       textInput(label: 'MFG Date (YYYY-MM-DD)', controller: mfgController),
       textInput(label: 'EXP Date (YYYY-MM-DD)', controller: expController),
-      textInput(label: 'Packets Per Carton', controller: packetsController, number: true),
-      textInput(label: 'Packet Purchase Price', controller: purchaseController, number: true),
-      textInput(label: 'Packet Selling Price', controller: sellingController, number: true),
-      textInput(label: 'Warehouse Stock in Packets', controller: stockController, number: true),
-      textInput(label: 'Low Stock Limit in Packets', controller: lowController, number: true),
-      textInput(label: 'Discount From Company', controller: companyDiscountController, number: true),
-      textInput(label: 'Trade / Shop Discount', controller: tradeDiscountController, number: true),
+      textInput(
+          label: 'Packets Per Carton',
+          controller: packetsController,
+          number: true),
+      textInput(
+          label: 'Packet Purchase Price',
+          controller: purchaseController,
+          number: true),
+      textInput(
+          label: 'Packet Selling Price',
+          controller: sellingController,
+          number: true),
+      textInput(
+          label: 'Warehouse Stock in Packets',
+          controller: stockController,
+          number: true),
+      textInput(
+          label: 'Low Stock Limit in Packets',
+          controller: lowController,
+          number: true),
+      textInput(
+          label: 'Discount From Company',
+          controller: companyDiscountController,
+          number: true),
+      textInput(
+          label: 'Trade / Shop Discount',
+          controller: tradeDiscountController,
+          number: true),
     ],
     onSave: () async {
       await runAction(
@@ -4010,24 +7625,31 @@ void showProductDialog(BuildContext context, AppState state, Future<void> Functi
   );
 }
 
-
-void showCompanyInvoicePreview(BuildContext context, AppState state, CompanyPurchase selectedInvoice) {
+void showCompanyInvoicePreview(
+    BuildContext context, AppState state, CompanyPurchase selectedInvoice) {
   final invoiceNo = selectedInvoice.invoiceNo.trim();
   final invoiceRows = state.companyPurchases.where((item) {
     if (invoiceNo.isEmpty) return item.id == selectedInvoice.id;
     return item.invoiceNo.trim() == invoiceNo;
   }).toList();
 
-  final invoiceAmount = invoiceRows.fold<double>(0, (sum, item) => sum + item.totalBill);
-  final invoicePaid = invoiceRows.fold<double>(0, (sum, item) => sum + item.paidAmount);
-  final invoiceRemaining = invoiceRows.fold<double>(0, (sum, item) => sum + item.remainingAmount);
-  final totalCartons = invoiceRows.fold<int>(0, (sum, item) => sum + item.cartons);
-  final grossTotal = invoiceRows.fold<double>(0, (sum, item) => sum + (item.totalPackets * item.packetPurchasePrice));
-  final discountTotal = invoiceRows.fold<double>(0, (sum, item) => sum + item.companyDiscount);
+  final invoiceAmount =
+      invoiceRows.fold<double>(0, (sum, item) => sum + item.totalBill);
+  final invoicePaid =
+      invoiceRows.fold<double>(0, (sum, item) => sum + item.paidAmount);
+  final invoiceRemaining =
+      invoiceRows.fold<double>(0, (sum, item) => sum + item.remainingAmount);
+  final totalCartons =
+      invoiceRows.fold<int>(0, (sum, item) => sum + item.cartons);
+  final grossTotal = invoiceRows.fold<double>(
+      0, (sum, item) => sum + (item.totalPackets * item.packetPurchasePrice));
+  final discountTotal =
+      invoiceRows.fold<double>(0, (sum, item) => sum + item.companyDiscount);
   final previousBalance = state.companyPurchases.where((item) {
     if (item.id == selectedInvoice.id) return false;
     if (item.date.compareTo(selectedInvoice.date) < 0) return true;
-    if (item.date == selectedInvoice.date && item.invoiceNo.compareTo(selectedInvoice.invoiceNo) < 0) return true;
+    if (item.date == selectedInvoice.date &&
+        item.invoiceNo.compareTo(selectedInvoice.invoiceNo) < 0) return true;
     return false;
   }).fold<double>(0, (sum, item) => sum + item.remainingAmount);
 
@@ -4052,7 +7674,8 @@ void showCompanyInvoicePreview(BuildContext context, AppState state, CompanyPurc
                     const Expanded(
                       child: Text(
                         'Company Invoice Preview',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w900),
                       ),
                     ),
                     ElevatedButton.icon(
@@ -4063,7 +7686,8 @@ void showCompanyInvoicePreview(BuildContext context, AppState state, CompanyPurc
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                      icon:
+                          const Icon(Icons.close_rounded, color: Colors.white),
                     ),
                   ],
                 ),
@@ -4155,11 +7779,13 @@ class CompanyInvoicePrintable extends StatelessWidget {
           flex: 6,
           child: Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(border: Border.all(color: Colors.black87)),
+            decoration:
+                BoxDecoration(border: Border.all(color: Colors.black87)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                invoiceHeaderLine('M/S', '021112    ${state.company?.name ?? 'AFRA TRADER'}'),
+                invoiceHeaderLine(
+                    'M/S', '021112    ${state.company?.name ?? 'AFRA TRADER'}'),
                 invoiceHeaderLine('Address', state.company?.address ?? ''),
                 invoiceHeaderLine('Remarks', invoice.note),
               ],
@@ -4175,27 +7801,39 @@ class CompanyInvoicePrintable extends StatelessWidget {
               const Center(
                 child: Text(
                   'Sales Invoice',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xff7f1d1d)),
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xff7f1d1d)),
                 ),
               ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(border: Border.all(color: Colors.black87)),
+                decoration:
+                    BoxDecoration(border: Border.all(color: Colors.black87)),
                 child: Column(
                   children: [
-                    invoiceHeaderLine('Invoice No.', invoice.invoiceNo.isEmpty ? '-' : invoice.invoiceNo),
-                    invoiceHeaderLine('Invoice Date', formatDateForUi(invoice.date)),
+                    invoiceHeaderLine('Invoice No.',
+                        invoice.invoiceNo.isEmpty ? '-' : invoice.invoiceNo),
+                    invoiceHeaderLine(
+                        'Invoice Date', formatDateForUi(invoice.date)),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(border: Border.all(color: Colors.black54)),
+                decoration:
+                    BoxDecoration(border: Border.all(color: Colors.black54)),
                 child: Text(
-                  invoice.companyName.isEmpty ? 'Company Invoice' : invoice.companyName,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xff374151)),
+                  invoice.companyName.isEmpty
+                      ? 'Company Invoice'
+                      : invoice.companyName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      color: Color(0xff374151)),
                 ),
               ),
             ],
@@ -4210,8 +7848,13 @@ class CompanyInvoicePrintable extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          SizedBox(width: 90, child: Text('$label :', style: const TextStyle(fontWeight: FontWeight.w900))),
-          Expanded(child: Text(value.isEmpty ? '-' : value, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          SizedBox(
+              width: 90,
+              child: Text('$label :',
+                  style: const TextStyle(fontWeight: FontWeight.w900))),
+          Expanded(
+              child: Text(value.isEmpty ? '-' : value,
+                  maxLines: 1, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -4246,7 +7889,8 @@ class CompanyInvoicePrintable extends StatelessWidget {
       final product = state.productById(item.productId);
       final gross = item.totalPackets * item.packetPurchasePrice;
       final cartonRate = item.packetsPerCarton * item.packetPurchasePrice;
-      final discountPercent = gross <= 0 ? 0 : (item.companyDiscount / gross) * 100;
+      final discountPercent =
+          gross <= 0 ? 0 : (item.companyDiscount / gross) * 100;
 
       tableRows.add(TableRow(children: [
         _InvoiceCell('${i + 1}'),
@@ -4254,7 +7898,9 @@ class CompanyInvoicePrintable extends StatelessWidget {
         _InvoiceCell('${item.packetsPerCarton}X${item.cartons}'),
         _InvoiceCell(product?.sku.isEmpty ?? true ? '-' : product!.sku),
         _InvoiceCell(item.batchNo.isEmpty ? '-' : item.batchNo),
-        _InvoiceCell(product?.expDate.isEmpty ?? true ? '-' : formatDateForUi(product!.expDate)),
+        _InvoiceCell(product?.expDate.isEmpty ?? true
+            ? '-'
+            : formatDateForUi(product!.expDate)),
         _InvoiceCell(item.cartons.toString()),
         _InvoiceCell(cartonRate.toStringAsFixed(0)),
         _InvoiceCell(gross.toStringAsFixed(0)),
@@ -4320,11 +7966,36 @@ class CompanyInvoicePrintable extends StatelessWidget {
           child: Table(
             border: TableBorder.all(color: Colors.black87),
             children: const [
-              TableRow(children: [_InvoiceCell('Description', bold: true), _InvoiceCell('1ST', bold: true), _InvoiceCell('2ND', bold: true), _InvoiceCell('3RD', bold: true)]),
-              TableRow(children: [_InvoiceCell('Date'), _InvoiceCell(''), _InvoiceCell(''), _InvoiceCell('')]),
-              TableRow(children: [_InvoiceCell('No. of CTN'), _InvoiceCell(''), _InvoiceCell(''), _InvoiceCell('')]),
-              TableRow(children: [_InvoiceCell('Loader Name'), _InvoiceCell(''), _InvoiceCell(''), _InvoiceCell('')]),
-              TableRow(children: [_InvoiceCell('Van No.'), _InvoiceCell(''), _InvoiceCell(''), _InvoiceCell('')]),
+              TableRow(children: [
+                _InvoiceCell('Description', bold: true),
+                _InvoiceCell('1ST', bold: true),
+                _InvoiceCell('2ND', bold: true),
+                _InvoiceCell('3RD', bold: true)
+              ]),
+              TableRow(children: [
+                _InvoiceCell('Date'),
+                _InvoiceCell(''),
+                _InvoiceCell(''),
+                _InvoiceCell('')
+              ]),
+              TableRow(children: [
+                _InvoiceCell('No. of CTN'),
+                _InvoiceCell(''),
+                _InvoiceCell(''),
+                _InvoiceCell('')
+              ]),
+              TableRow(children: [
+                _InvoiceCell('Loader Name'),
+                _InvoiceCell(''),
+                _InvoiceCell(''),
+                _InvoiceCell('')
+              ]),
+              TableRow(children: [
+                _InvoiceCell('Van No.'),
+                _InvoiceCell(''),
+                _InvoiceCell(''),
+                _InvoiceCell('')
+              ]),
             ],
           ),
         ),
@@ -4335,8 +8006,10 @@ class CompanyInvoicePrintable extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Text("Receiver's by", style: TextStyle(fontWeight: FontWeight.w900)),
-                Text('Authorized by', style: TextStyle(fontWeight: FontWeight.w900)),
+                Text("Receiver's by",
+                    style: TextStyle(fontWeight: FontWeight.w900)),
+                Text('Authorized by',
+                    style: TextStyle(fontWeight: FontWeight.w900)),
               ],
             ),
           ),
@@ -4353,7 +8026,9 @@ class CompanyInvoicePrintable extends StatelessWidget {
               summaryLine('Paid Amount', state.rs(invoicePaid)),
               summaryLine('Invoice Balance', state.rs(invoiceRemaining)),
               summaryLine('Previous', state.rs(previousBalance)),
-              summaryLine('Total Balance', state.rs(previousBalance + invoiceRemaining), bold: true),
+              summaryLine(
+                  'Total Balance', state.rs(previousBalance + invoiceRemaining),
+                  bold: true),
             ],
           ),
         ),
@@ -4369,7 +8044,9 @@ class CompanyInvoicePrintable extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontWeight: bold ? FontWeight.w900 : FontWeight.w800, color: const Color(0xff7f1d1d)),
+              style: TextStyle(
+                  fontWeight: bold ? FontWeight.w900 : FontWeight.w800,
+                  color: const Color(0xff7f1d1d)),
             ),
           ),
           SizedBox(
@@ -4377,7 +8054,9 @@ class CompanyInvoicePrintable extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(fontWeight: bold ? FontWeight.w900 : FontWeight.w800, color: const Color(0xff7f1d1d)),
+              style: TextStyle(
+                  fontWeight: bold ? FontWeight.w900 : FontWeight.w800,
+                  color: const Color(0xff7f1d1d)),
             ),
           ),
         ],
@@ -4400,13 +8079,16 @@ class _InvoiceCell extends StatelessWidget {
         text,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 9.2, fontWeight: bold ? FontWeight.w900 : FontWeight.w500),
+        style: TextStyle(
+            fontSize: 9.2,
+            fontWeight: bold ? FontWeight.w900 : FontWeight.w500),
       ),
     );
   }
 }
 
-void showCompanyPurchaseDialog(BuildContext context, AppState state, Future<void> Function() onChanged) {
+void showCompanyPurchaseDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged) {
   if (state.products.isEmpty) {
     showSnack(context, 'Add product first.');
     return;
@@ -4415,12 +8097,18 @@ void showCompanyPurchaseDialog(BuildContext context, AppState state, Future<void
   String productId = state.products.first.id;
   Product selectedProduct = state.products.first;
   final invoiceController = TextEditingController();
-  final companyController = TextEditingController(text: selectedProduct.brand.isNotEmpty ? selectedProduct.brand : (state.company?.name ?? ''));
+  final companyController = TextEditingController(
+      text: selectedProduct.brand.isNotEmpty
+          ? selectedProduct.brand
+          : (state.company?.name ?? ''));
   final batchController = TextEditingController(text: selectedProduct.batchNo);
   final cartonsController = TextEditingController(text: '1');
-  final packetsController = TextEditingController(text: selectedProduct.packetsPerCarton.toString());
-  final priceController = TextEditingController(text: selectedProduct.purchasePrice.toStringAsFixed(0));
-  final discountController = TextEditingController(text: selectedProduct.companyDiscount.toStringAsFixed(0));
+  final packetsController =
+      TextEditingController(text: selectedProduct.packetsPerCarton.toString());
+  final priceController = TextEditingController(
+      text: selectedProduct.purchasePrice.toStringAsFixed(0));
+  final discountController = TextEditingController(
+      text: selectedProduct.companyDiscount.toStringAsFixed(0));
   final paidController = TextEditingController(text: '0');
   final noteController = TextEditingController();
 
@@ -4442,29 +8130,56 @@ void showCompanyPurchaseDialog(BuildContext context, AppState state, Future<void
         DropdownButtonFormField<String>(
           value: productId,
           decoration: const InputDecoration(labelText: 'Product'),
-          items: state.products.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+          items: state.products
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
           onChanged: (value) {
             if (value == null) return;
             setDialog(() {
               productId = value;
               selectedProduct = state.productById(value) ?? selectedProduct;
               batchController.text = selectedProduct.batchNo;
-              if (selectedProduct.brand.isNotEmpty) companyController.text = selectedProduct.brand;
-              packetsController.text = selectedProduct.packetsPerCarton.toString();
-              priceController.text = selectedProduct.purchasePrice.toStringAsFixed(0);
-              discountController.text = selectedProduct.companyDiscount.toStringAsFixed(0);
+              if (selectedProduct.brand.isNotEmpty)
+                companyController.text = selectedProduct.brand;
+              packetsController.text =
+                  selectedProduct.packetsPerCarton.toString();
+              priceController.text =
+                  selectedProduct.purchasePrice.toStringAsFixed(0);
+              discountController.text =
+                  selectedProduct.companyDiscount.toStringAsFixed(0);
             });
           },
         ),
         textInput(label: 'Invoice No', controller: invoiceController),
         textInput(label: 'Company Name', controller: companyController),
         textInput(label: 'Batch No', controller: batchController),
-        textInput(label: 'Cartons Received', controller: cartonsController, number: true, onChanged: (_) => setDialog(() {})),
-        textInput(label: 'Packets Per Carton', controller: packetsController, number: true, onChanged: (_) => setDialog(() {})),
-        textInput(label: 'Packet Purchase Price', controller: priceController, number: true, onChanged: (_) => setDialog(() {})),
-        textInput(label: 'Discount From Company', controller: discountController, number: true, onChanged: (_) => setDialog(() {})),
-        textInput(label: 'Paid Amount To Company', controller: paidController, number: true, onChanged: (_) => setDialog(() {})),
-        textInput(label: 'Slip / Cheque / Bank / Note', controller: noteController),
+        textInput(
+            label: 'Cartons Received',
+            controller: cartonsController,
+            number: true,
+            onChanged: (_) => setDialog(() {})),
+        textInput(
+            label: 'Packets Per Carton',
+            controller: packetsController,
+            number: true,
+            onChanged: (_) => setDialog(() {})),
+        textInput(
+            label: 'Packet Purchase Price',
+            controller: priceController,
+            number: true,
+            onChanged: (_) => setDialog(() {})),
+        textInput(
+            label: 'Discount From Company',
+            controller: discountController,
+            number: true,
+            onChanged: (_) => setDialog(() {})),
+        textInput(
+            label: 'Paid Amount To Company',
+            controller: paidController,
+            number: true,
+            onChanged: (_) => setDialog(() {})),
+        textInput(
+            label: 'Slip / Cheque / Bank / Note', controller: noteController),
         const SizedBox(height: 14),
         Container(
           width: double.infinity,
@@ -4477,10 +8192,13 @@ void showCompanyPurchaseDialog(BuildContext context, AppState state, Future<void
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Total packets: $totalPackets', style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text('Total packets: $totalPackets',
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
               Text('Gross bill: ${state.rs(gross)}'),
               Text('Total after discount: ${state.rs(totalBill)}'),
-              Text('Remaining payable: ${state.rs(remaining)}', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.red)),
+              Text('Remaining payable: ${state.rs(remaining)}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900, color: Colors.red)),
             ],
           ),
         ),
@@ -4508,8 +8226,8 @@ void showCompanyPurchaseDialog(BuildContext context, AppState state, Future<void
   );
 }
 
-
-void showLoadDialog(BuildContext context, AppState state, Future<void> Function() onChanged) {
+void showLoadDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged) {
   if (state.dsrs.isEmpty || state.suppliers.isEmpty || state.products.isEmpty) {
     showSnack(context, 'Add DSR/booker, salesman, and product first.');
     return;
@@ -4528,7 +8246,9 @@ void showLoadDialog(BuildContext context, AppState state, Future<void> Function(
         DropdownButtonFormField<String>(
           value: dsrId,
           decoration: const InputDecoration(labelText: 'Booker'),
-          items: state.dsrs.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+          items: state.dsrs
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
           onChanged: (value) {
             setDialog(() {
               dsrId = value ?? dsrId;
@@ -4540,10 +8260,17 @@ void showLoadDialog(BuildContext context, AppState state, Future<void> Function(
         DropdownButtonFormField<String>(
           value: productId,
           decoration: const InputDecoration(labelText: 'Product'),
-          items: state.products.map((x) => DropdownMenuItem(value: x.id, child: Text('${x.name} - Warehouse: ${x.warehouseStock}'))).toList(),
+          items: state.products
+              .map((x) => DropdownMenuItem(
+                  value: x.id,
+                  child: Text('${x.name} - Warehouse: ${x.warehouseStock}')))
+              .toList(),
           onChanged: (value) => setDialog(() => productId = value ?? productId),
         ),
-        textInput(label: 'Order / Load Quantity', controller: qtyController, number: true),
+        textInput(
+            label: 'Order / Load Quantity',
+            controller: qtyController,
+            number: true),
       ];
     },
     onSave: () async {
@@ -4562,8 +8289,11 @@ void showLoadDialog(BuildContext context, AppState state, Future<void> Function(
   );
 }
 
-void showSaleDialog(BuildContext context, AppState state, Future<void> Function() onChanged) {
-  if (state.dsrs.isEmpty || state.shopkeepers.isEmpty || state.products.isEmpty) {
+void showSaleDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged) {
+  if (state.dsrs.isEmpty ||
+      state.shopkeepers.isEmpty ||
+      state.products.isEmpty) {
     showSnack(context, 'Add DSR, shopkeeper, and product first.');
     return;
   }
@@ -4574,8 +8304,11 @@ void showSaleDialog(BuildContext context, AppState state, Future<void> Function(
   SaleType saleType = SaleType.cash;
 
   final qtyController = TextEditingController();
-  final priceController = TextEditingController(text: state.products.first.sellingPrice.toStringAsFixed(0));
-  final billController = TextEditingController(text: 'BILL-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}');
+  final priceController = TextEditingController(
+      text: state.products.first.sellingPrice.toStringAsFixed(0));
+  final billController = TextEditingController(
+      text:
+          'BILL-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}');
 
   statefulDialog(
     context: context,
@@ -4586,37 +8319,56 @@ void showSaleDialog(BuildContext context, AppState state, Future<void> Function(
         DropdownButtonFormField<String>(
           value: dsrId,
           decoration: const InputDecoration(labelText: 'Booker'),
-          items: state.dsrs.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+          items: state.dsrs
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
           onChanged: (value) => setDialog(() => dsrId = value ?? dsrId),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           value: shopkeeperId,
           decoration: const InputDecoration(labelText: 'Shopkeeper'),
-          items: state.shopkeepers.map((x) => DropdownMenuItem(value: x.id, child: Text('${x.shopName} - Credit: ${state.rs(x.pendingCredit)}'))).toList(),
-          onChanged: (value) => setDialog(() => shopkeeperId = value ?? shopkeeperId),
+          items: state.shopkeepers
+              .map((x) => DropdownMenuItem(
+                  value: x.id,
+                  child: Text(
+                      '${x.shopName} - Credit: ${state.rs(x.pendingCredit)}')))
+              .toList(),
+          onChanged: (value) =>
+              setDialog(() => shopkeeperId = value ?? shopkeeperId),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           value: productId,
           decoration: const InputDecoration(labelText: 'Product'),
-          items: state.products.map((x) => DropdownMenuItem(value: x.id, child: Text('${x.name} - DSR Stock: ${state.dsrProductStock(dsrId, x.id)}'))).toList(),
+          items: state.products
+              .map((x) => DropdownMenuItem(
+                  value: x.id,
+                  child: Text(
+                      '${x.name} - DSR Stock: ${state.dsrProductStock(dsrId, x.id)}')))
+              .toList(),
           onChanged: (value) {
             setDialog(() {
               productId = value ?? productId;
-              priceController.text = state.productById(productId)?.sellingPrice.toStringAsFixed(0) ?? priceController.text;
+              priceController.text = state
+                      .productById(productId)
+                      ?.sellingPrice
+                      .toStringAsFixed(0) ??
+                  priceController.text;
             });
           },
         ),
         textInput(label: 'Quantity', controller: qtyController, number: true),
-        textInput(label: 'Selling Price', controller: priceController, number: true),
+        textInput(
+            label: 'Selling Price', controller: priceController, number: true),
         const SizedBox(height: 12),
         DropdownButtonFormField<SaleType>(
           value: saleType,
           decoration: const InputDecoration(labelText: 'Sale Type'),
           items: const [
             DropdownMenuItem(value: SaleType.cash, child: Text('Cash Sale')),
-            DropdownMenuItem(value: SaleType.credit, child: Text('Credit Sale')),
+            DropdownMenuItem(
+                value: SaleType.credit, child: Text('Credit Sale')),
           ],
           onChanged: (value) => setDialog(() => saleType = value ?? saleType),
         ),
@@ -4641,7 +8393,8 @@ void showSaleDialog(BuildContext context, AppState state, Future<void> Function(
   );
 }
 
-void showRecoveryDialog(BuildContext context, AppState state, Future<void> Function() onChanged) {
+void showRecoveryDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged) {
   if (state.dsrs.isEmpty || state.shopkeepers.isEmpty) {
     showSnack(context, 'Add DSR and shopkeeper first.');
     return;
@@ -4651,7 +8404,9 @@ void showRecoveryDialog(BuildContext context, AppState state, Future<void> Funct
   String shopkeeperId = state.shopkeepers.first.id;
 
   final amountController = TextEditingController();
-  final billController = TextEditingController(text: 'REC-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}');
+  final billController = TextEditingController(
+      text:
+          'REC-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}');
 
   statefulDialog(
     context: context,
@@ -4661,18 +8416,29 @@ void showRecoveryDialog(BuildContext context, AppState state, Future<void> Funct
         DropdownButtonFormField<String>(
           value: dsrId,
           decoration: const InputDecoration(labelText: 'Booker'),
-          items: state.dsrs.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+          items: state.dsrs
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
           onChanged: (value) => setDialog(() => dsrId = value ?? dsrId),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           value: shopkeeperId,
           decoration: const InputDecoration(labelText: 'Shopkeeper'),
-          items: state.shopkeepers.map((x) => DropdownMenuItem(value: x.id, child: Text('${x.shopName} - Pending: ${state.rs(x.pendingCredit)}'))).toList(),
-          onChanged: (value) => setDialog(() => shopkeeperId = value ?? shopkeeperId),
+          items: state.shopkeepers
+              .map((x) => DropdownMenuItem(
+                  value: x.id,
+                  child: Text(
+                      '${x.shopName} - Pending: ${state.rs(x.pendingCredit)}')))
+              .toList(),
+          onChanged: (value) =>
+              setDialog(() => shopkeeperId = value ?? shopkeeperId),
         ),
         textInput(label: 'Cheque / Bill No', controller: billController),
-        textInput(label: 'Received Amount', controller: amountController, number: true),
+        textInput(
+            label: 'Received Amount',
+            controller: amountController,
+            number: true),
       ];
     },
     onSave: () async {
@@ -4691,7 +8457,8 @@ void showRecoveryDialog(BuildContext context, AppState state, Future<void> Funct
   );
 }
 
-void showExpenseDialog(BuildContext context, AppState state, Future<void> Function() onChanged) {
+void showExpenseDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged) {
   if (state.dsrs.isEmpty) {
     showSnack(context, 'Add DSR first.');
     return;
@@ -4701,7 +8468,16 @@ void showExpenseDialog(BuildContext context, AppState state, Future<void> Functi
   String expenseType = 'Fuel Expense';
   final amountController = TextEditingController();
   final noteController = TextEditingController();
-  final types = ['Fuel Expense', 'Office Expense', 'Advance Payment', 'Extra Payment In', 'Payment Out Credit', 'Return Payment', 'Advance Payment Return', 'Other Expense'];
+  final types = [
+    'Fuel Expense',
+    'Office Expense',
+    'Advance Payment',
+    'Extra Payment In',
+    'Payment Out Credit',
+    'Return Payment',
+    'Advance Payment Return',
+    'Other Expense'
+  ];
 
   statefulDialog(
     context: context,
@@ -4711,15 +8487,20 @@ void showExpenseDialog(BuildContext context, AppState state, Future<void> Functi
         DropdownButtonFormField<String>(
           value: dsrId,
           decoration: const InputDecoration(labelText: 'Booker'),
-          items: state.dsrs.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+          items: state.dsrs
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
           onChanged: (value) => setDialog(() => dsrId = value ?? dsrId),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           value: expenseType,
           decoration: const InputDecoration(labelText: 'Type'),
-          items: types.map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
-          onChanged: (value) => setDialog(() => expenseType = value ?? expenseType),
+          items: types
+              .map((x) => DropdownMenuItem(value: x, child: Text(x)))
+              .toList(),
+          onChanged: (value) =>
+              setDialog(() => expenseType = value ?? expenseType),
         ),
         textInput(label: 'Amount', controller: amountController, number: true),
         textInput(label: 'Note', controller: noteController),
@@ -4741,11 +8522,13 @@ void showExpenseDialog(BuildContext context, AppState state, Future<void> Functi
   );
 }
 
-void showDepositDialog(BuildContext context, AppState state, Future<void> Function() onChanged) {
+void showDepositDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged) {
   final partyController = TextEditingController();
   final coinsController = TextEditingController(text: '0');
   final noteControllers = {
-    for (final note in [5000, 1000, 500, 100, 50, 20, 10]) note: TextEditingController(text: '0'),
+    for (final note in [5000, 1000, 500, 100, 50, 20, 10])
+      note: TextEditingController(text: '0'),
   };
 
   simpleDialog(
@@ -4753,12 +8536,16 @@ void showDepositDialog(BuildContext context, AppState state, Future<void> Functi
     title: 'Add Deposit',
     children: [
       textInput(label: 'Party / Bank', controller: partyController),
-      ...noteControllers.entries.map((entry) => textInput(label: '${entry.key} Notes Count', controller: entry.value, number: true)),
+      ...noteControllers.entries.map((entry) => textInput(
+          label: '${entry.key} Notes Count',
+          controller: entry.value,
+          number: true)),
       textInput(label: 'Coins', controller: coinsController, number: true),
     ],
     onSave: () async {
       final notes = <int, int>{};
-      noteControllers.forEach((note, controller) => notes[note] = toInt(controller.text));
+      noteControllers
+          .forEach((note, controller) => notes[note] = toInt(controller.text));
       await runAction(
         context,
         () => state.service.addDeposit(
@@ -4773,7 +8560,8 @@ void showDepositDialog(BuildContext context, AppState state, Future<void> Functi
   );
 }
 
-void showClaimDialog(BuildContext context, AppState state, Future<void> Function() onChanged) {
+void showClaimDialog(
+    BuildContext context, AppState state, Future<void> Function() onChanged) {
   if (state.products.isEmpty) {
     showSnack(context, 'Add product first.');
     return;
@@ -4794,14 +8582,18 @@ void showClaimDialog(BuildContext context, AppState state, Future<void> Function
         DropdownButtonFormField<String>(
           value: productId,
           decoration: const InputDecoration(labelText: 'Product'),
-          items: state.products.map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))).toList(),
+          items: state.products
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name)))
+              .toList(),
           onChanged: (value) => setDialog(() => productId = value ?? productId),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           value: claimType,
           decoration: const InputDecoration(labelText: 'Type'),
-          items: const ['Expiry', 'Claim', 'Damage', 'Return Stock'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+          items: const ['Expiry', 'Claim', 'Damage', 'Return Stock']
+              .map((x) => DropdownMenuItem(value: x, child: Text(x)))
+              .toList(),
           onChanged: (value) => setDialog(() => claimType = value ?? claimType),
         ),
         textInput(label: 'Quantity', controller: qtyController, number: true),
@@ -4842,7 +8634,9 @@ void simpleDialog({
           child: SingleChildScrollView(child: Column(children: children)),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(dialogContext);
@@ -4860,7 +8654,8 @@ void simpleDialog({
 void statefulDialog({
   required BuildContext context,
   required String title,
-  required List<Widget> Function(void Function(VoidCallback fn) setDialog) builder,
+  required List<Widget> Function(void Function(VoidCallback fn) setDialog)
+      builder,
   required Future<void> Function() onSave,
 }) {
   showDialog(
@@ -4869,13 +8664,17 @@ void statefulDialog({
       return StatefulBuilder(
         builder: (dialogContext, setDialog) {
           return AlertDialog(
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+            title: Text(title,
+                style: const TextStyle(fontWeight: FontWeight.w900)),
             content: SizedBox(
               width: 560,
-              child: SingleChildScrollView(child: Column(children: builder(setDialog))),
+              child: SingleChildScrollView(
+                  child: Column(children: builder(setDialog))),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel')),
               ElevatedButton.icon(
                 onPressed: () async {
                   Navigator.pop(dialogContext);

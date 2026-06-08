@@ -214,6 +214,52 @@ class SupabaseService {
     });
   }
 
+
+  Future<String> addProductReturningId({
+    required String companyId,
+    required String name,
+    required String sku,
+    required String category,
+    required String brand,
+    required String batchNo,
+    required String mfgDate,
+    required String expDate,
+    required double purchasePrice,
+    required double sellingPrice,
+    required int warehouseStock,
+    required int lowStockLimit,
+    required int packetsPerCarton,
+    required double companyDiscount,
+    required double tradeDiscount,
+  }) async {
+    if (name.trim().isEmpty) throw Exception('Product name is required');
+
+    final row = await client
+        .from('products')
+        .insert({
+          'company_id': companyId,
+          'name': name.trim(),
+          'sku': sku.trim(),
+          'category': category.trim(),
+          'brand': brand.trim(),
+          'batch_no': batchNo.trim(),
+          'mfg_date': mfgDate.trim().isEmpty ? null : mfgDate.trim(),
+          'exp_date': expDate.trim().isEmpty ? null : expDate.trim(),
+          'purchase_price': purchasePrice,
+          'selling_price': sellingPrice,
+          'warehouse_stock': warehouseStock,
+          'low_stock_limit': lowStockLimit,
+          'packets_per_carton': packetsPerCarton,
+          'company_discount': companyDiscount,
+          'trade_discount': tradeDiscount,
+          'created_by': currentUserId,
+        })
+        .select('id')
+        .single();
+
+    return asText(row['id']);
+  }
+
   Future<void> addCompanyPurchase({
     required String companyId,
     required String invoiceNo,
@@ -226,15 +272,18 @@ class SupabaseService {
     required double companyDiscount,
     required double paidAmount,
     required String note,
+    int extraUnits = 0,
   }) async {
     if (invoiceNo.trim().isEmpty) throw Exception('Invoice number is required');
     if (companyName.trim().isEmpty) throw Exception('Company name is required');
     if (productId.isEmpty) throw Exception('Product is required');
-    if (cartons <= 0) throw Exception('Cartons must be greater than 0');
     if (packetsPerCarton <= 0) throw Exception('Packets per carton must be greater than 0');
     if (packetPurchasePrice <= 0) throw Exception('Packet purchase price must be greater than 0');
 
-    final totalPackets = cartons * packetsPerCarton;
+    final safeCartons = cartons < 0 ? 0 : cartons;
+    final safeExtraUnits = extraUnits < 0 ? 0 : extraUnits;
+    final totalPackets = (safeCartons * packetsPerCarton) + safeExtraUnits;
+    if (totalPackets <= 0) throw Exception('Cartons or units must be greater than 0');
     final grossBill = totalPackets * packetPurchasePrice;
     final safeDiscount = companyDiscount < 0 ? 0 : companyDiscount;
     final totalBill = (grossBill - safeDiscount).clamp(0, double.infinity).toDouble();
@@ -247,7 +296,7 @@ class SupabaseService {
       'company_name': companyName.trim(),
       'product_id': productId,
       'batch_no': batchNo.trim(),
-      'cartons': cartons,
+      'cartons': safeCartons,
       'packets_per_carton': packetsPerCarton,
       'total_packets': totalPackets,
       'packet_purchase_price': packetPurchasePrice,
@@ -270,6 +319,62 @@ class SupabaseService {
     }).eq('id', productId);
 
   }
+  Future<void> returnStock({
+  required String companyId,
+  required String dsrId,
+  required String productId,
+  required int quantity,
+  String note = '',
+}) async {
+  if (quantity <= 0) {
+    throw Exception('Return quantity must be greater than 0');
+  }
+
+  final existing = await client
+      .from('dsr_stocks')
+      .select()
+      .eq('dsr_id', dsrId)
+      .eq('product_id', productId)
+      .maybeSingle();
+
+  if (existing == null) {
+    throw Exception('No DSR stock for this return product');
+  }
+
+  final dsrStock = asInt(existing['quantity']);
+
+  if (dsrStock < quantity) {
+    throw Exception('Not enough DSR stock to return');
+  }
+
+  await client.from('dsr_stocks').update({
+    'quantity': dsrStock - quantity,
+  }).eq('id', existing['id']);
+
+  final product = await client
+      .from('products')
+      .select('warehouse_stock')
+      .eq('id', productId)
+      .single();
+
+  final warehouseStock = asInt(product['warehouse_stock']);
+
+  await client.from('products').update({
+    'warehouse_stock': warehouseStock + quantity,
+  }).eq('id', productId);
+
+  await client.from('stock_movements').insert({
+    'company_id': companyId,
+    'product_id': productId,
+    'dsr_id': dsrId,
+    'movement_type': 'Return from DSR',
+    'quantity': quantity,
+    'note': note.trim().isEmpty
+        ? 'DSR stock returned to warehouse'
+        : note.trim(),
+    'created_by': currentUserId,
+  });
+}
 
   Future<void> loadStock({
     required String companyId,
@@ -306,8 +411,13 @@ class SupabaseService {
       }).eq('id', existing['id']);
     }
 
+    final now = DateTime.now();
+    final today =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
     await client.from('load_entries').insert({
       'company_id': companyId,
+      'date': today,
       'dsr_id': dsrId,
       'supplier_id': supplierId,
       'product_id': productId,

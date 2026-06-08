@@ -278,8 +278,15 @@ Widget textInput({
   );
 }
 
-double toDouble(String value) => double.tryParse(value.trim()) ?? 0;
-int toInt(String value) => int.tryParse(value.trim()) ?? 0;
+double toDouble(String value) {
+  final cleaned = value.trim().replaceAll(',', '').replaceAll('%', '');
+  return double.tryParse(cleaned) ?? 0;
+}
+
+int toInt(String value) {
+  final cleaned = value.trim().replaceAll(',', '').replaceAll('%', '');
+  return int.tryParse(cleaned) ?? double.tryParse(cleaned)?.round() ?? 0;
+}
 
 AppToastType detectToastType(String message) {
   final text = message.toLowerCase();
