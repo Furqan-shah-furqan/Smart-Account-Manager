@@ -12,12 +12,73 @@ class SupabaseService {
     return user.id;
   }
 
+  void _validateAuthFields({required String email, required String password}) {
+    final cleanEmail = email.trim().toLowerCase();
+    final emailOk = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(cleanEmail);
+
+    if (cleanEmail.isEmpty) {
+      throw Exception('Email is required');
+    }
+    if (!emailOk) {
+      throw Exception('Enter a valid email address like yourname@gmail.com');
+    }
+    if (cleanEmail == 'nobody@gmail.com' ||
+        cleanEmail.startsWith('nobody@') ||
+        cleanEmail.startsWith('test@')) {
+      throw Exception('This test email is rejected by Supabase. Use your real email or a Gmail alias like yourname+test1@gmail.com');
+    }
+    if (password.trim().length < 6) {
+      throw Exception('Password must be at least 6 characters');
+    }
+  }
+
+  String _friendlyAuthError(Object error) {
+    if (error is AuthException) {
+      final message = error.message.toLowerCase();
+      final code = (error.code ?? '').toLowerCase();
+      final status = error.statusCode;
+
+      if (status == '429' ||
+          code.contains('over_email_send_rate_limit') ||
+          message.contains('rate limit')) {
+        return 'Signup email limit is reached in Supabase. Wait 1 hour, or disable Confirm Email in Supabase Auth settings for testing, then try again.';
+      }
+      if (code.contains('email_address_invalid') ||
+          message.contains('email address') && message.contains('invalid')) {
+        return 'This email is rejected by Supabase. Use your real email or a Gmail alias like yourname+test1@gmail.com.';
+      }
+      if (message.contains('already registered') ||
+          message.contains('already been registered') ||
+          message.contains('user already registered')) {
+        return 'This email already has an account. Click Login instead of Create Account.';
+      }
+      return error.message;
+    }
+    return error.toString().replaceFirst('Exception: ', '');
+  }
+
   Future<void> signIn({required String email, required String password}) async {
-    await client.auth.signInWithPassword(email: email, password: password);
+    _validateAuthFields(email: email, password: password);
+    try {
+      await client.auth.signInWithPassword(
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      );
+    } catch (error) {
+      throw Exception(_friendlyAuthError(error));
+    }
   }
 
   Future<void> signUp({required String email, required String password}) async {
-    await client.auth.signUp(email: email, password: password);
+    _validateAuthFields(email: email, password: password);
+    try {
+      await client.auth.signUp(
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      );
+    } catch (error) {
+      throw Exception(_friendlyAuthError(error));
+    }
   }
 
   Future<void> signOut() async {
@@ -330,47 +391,16 @@ class SupabaseService {
     throw Exception('Return quantity must be greater than 0');
   }
 
-  final existing = await client
-      .from('dsr_stocks')
-      .select()
-      .eq('dsr_id', dsrId)
-      .eq('product_id', productId)
-      .maybeSingle();
-
-  if (existing == null) {
-    throw Exception('No DSR stock for this return product');
-  }
-
-  final dsrStock = asInt(existing['quantity']);
-
-  if (dsrStock < quantity) {
-    throw Exception('Not enough DSR stock to return');
-  }
-
-  await client.from('dsr_stocks').update({
-    'quantity': dsrStock - quantity,
-  }).eq('id', existing['id']);
-
-  final product = await client
-      .from('products')
-      .select('warehouse_stock')
-      .eq('id', productId)
-      .single();
-
-  final warehouseStock = asInt(product['warehouse_stock']);
-
-  await client.from('products').update({
-    'warehouse_stock': warehouseStock + quantity,
-  }).eq('id', productId);
-
+  // Distributor keeps one shared stock. DSRs do not hold separate stock.
+  // This return is saved only as a movement/note for settlement history.
   await client.from('stock_movements').insert({
     'company_id': companyId,
     'product_id': productId,
     'dsr_id': dsrId,
-    'movement_type': 'Return from DSR',
+    'movement_type': 'Return Note',
     'quantity': quantity,
     'note': note.trim().isEmpty
-        ? 'DSR stock returned to warehouse'
+        ? 'Return noted for DSR settlement. Distributor stock is shared.'
         : note.trim(),
     'created_by': currentUserId,
   });
@@ -385,32 +415,16 @@ class SupabaseService {
   }) async {
     if (quantity <= 0) throw Exception('Quantity must be greater than 0');
 
-    final product = await client.from('products').select('warehouse_stock').eq('id', productId).single();
+    final product = await client
+        .from('products')
+        .select('warehouse_stock')
+        .eq('id', productId)
+        .single();
     final warehouseStock = asInt(product['warehouse_stock']);
-    if (warehouseStock < quantity) throw Exception('Not enough warehouse stock');
+    if (warehouseStock < quantity) throw Exception('Not enough distributor stock');
 
-    await client.from('products').update({'warehouse_stock': warehouseStock - quantity}).eq('id', productId);
-
-    final existing = await client
-        .from('dsr_stocks')
-        .select()
-        .eq('dsr_id', dsrId)
-        .eq('product_id', productId)
-        .maybeSingle();
-
-    if (existing == null) {
-      await client.from('dsr_stocks').insert({
-        'company_id': companyId,
-        'dsr_id': dsrId,
-        'product_id': productId,
-        'quantity': quantity,
-      });
-    } else {
-      await client.from('dsr_stocks').update({
-        'quantity': asInt(existing['quantity']) + quantity,
-      }).eq('id', existing['id']);
-    }
-
+    // Do not deduct stock here. Load form is only a DSR/salesman sheet.
+    // Real stock deduction happens when an order/sale is booked.
     final now = DateTime.now();
     final today =
         '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
@@ -429,9 +443,9 @@ class SupabaseService {
       'company_id': companyId,
       'product_id': productId,
       'dsr_id': dsrId,
-      'movement_type': 'Load to DSR',
+      'movement_type': 'Load Form Created',
       'quantity': quantity,
-      'note': 'Warehouse stock loaded to DSR',
+      'note': 'Load form created. Distributor stock remains shared.',
       'created_by': currentUserId,
     });
   }
@@ -440,7 +454,6 @@ class SupabaseService {
     required String companyId,
     required String billNo,
     required String dsrId,
-    required String shopkeeperId,
     required String productId,
     required int quantity,
     required double price,
@@ -450,25 +463,26 @@ class SupabaseService {
     if (quantity <= 0) throw Exception('Quantity must be greater than 0');
     if (price <= 0) throw Exception('Price must be greater than 0');
 
-    final existing = await client
-        .from('dsr_stocks')
-        .select()
-        .eq('dsr_id', dsrId)
-        .eq('product_id', productId)
-        .maybeSingle();
+    final product = await client
+        .from('products')
+        .select('warehouse_stock')
+        .eq('id', productId)
+        .single();
+    final warehouseStock = asInt(product['warehouse_stock']);
 
-    if (existing == null) throw Exception('No DSR stock for this product');
+    if (warehouseStock < quantity) {
+      throw Exception('Not enough distributor stock');
+    }
 
-    final dsrStock = asInt(existing['quantity']);
-    if (dsrStock < quantity) throw Exception('Not enough DSR stock');
-
-    await client.from('dsr_stocks').update({'quantity': dsrStock - quantity}).eq('id', existing['id']);
+    await client.from('products').update({
+      'warehouse_stock': warehouseStock - quantity,
+    }).eq('id', productId);
 
     await client.from('sales').insert({
       'company_id': companyId,
       'bill_no': billNo.trim(),
       'dsr_id': dsrId,
-      'shopkeeper_id': shopkeeperId,
+      'shopkeeper_id': null,
       'product_id': productId,
       'quantity': quantity,
       'price': price,
@@ -476,20 +490,13 @@ class SupabaseService {
       'created_by': currentUserId,
     });
 
-    if (type == SaleType.credit) {
-      final shop = await client.from('shopkeepers').select('pending_credit').eq('id', shopkeeperId).single();
-      await client.from('shopkeepers').update({
-        'pending_credit': asDouble(shop['pending_credit']) + (quantity * price),
-      }).eq('id', shopkeeperId);
-    }
-
     await client.from('stock_movements').insert({
       'company_id': companyId,
       'product_id': productId,
       'dsr_id': dsrId,
       'movement_type': type == SaleType.cash ? 'Cash Sale' : 'Credit Sale',
       'quantity': -quantity,
-      'note': billNo.trim(),
+      'note': '${billNo.trim()} • Deducted from shared distributor stock',
       'created_by': currentUserId,
     });
   }
@@ -498,25 +505,38 @@ class SupabaseService {
     required String companyId,
     required String chequeBillNo,
     required String dsrId,
-    required String shopkeeperId,
     required double amount,
   }) async {
     if (amount <= 0) throw Exception('Amount must be greater than 0');
 
-    final shop = await client.from('shopkeepers').select('pending_credit').eq('id', shopkeeperId).single();
-    final pending = asDouble(shop['pending_credit']);
+    final creditRows = await client
+        .from('sales')
+        .select('total')
+        .eq('company_id', companyId)
+        .eq('dsr_id', dsrId)
+        .eq('sale_type', 'credit');
+
+    final recoveryRows = await client
+        .from('recoveries')
+        .select('received_amount')
+        .eq('company_id', companyId)
+        .eq('dsr_id', dsrId);
+
+    final creditTotal = creditRows.fold<double>(
+        0, (sum, item) => sum + asDouble(asMap(item)['total']));
+    final recoveredTotal = recoveryRows.fold<double>(
+        0, (sum, item) => sum + asDouble(asMap(item)['received_amount']));
+    final pending = creditTotal - recoveredTotal;
 
     if (amount > pending) throw Exception('Recovery is greater than pending credit');
 
     final balanceAfter = pending - amount;
 
-    await client.from('shopkeepers').update({'pending_credit': balanceAfter}).eq('id', shopkeeperId);
-
     await client.from('recoveries').insert({
       'company_id': companyId,
       'cheque_bill_no': chequeBillNo.trim(),
       'dsr_id': dsrId,
-      'shopkeeper_id': shopkeeperId,
+      'shopkeeper_id': null,
       'received_amount': amount,
       'balance_after': balanceAfter,
       'created_by': currentUserId,

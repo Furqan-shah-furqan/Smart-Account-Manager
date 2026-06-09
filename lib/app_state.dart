@@ -104,21 +104,43 @@ class AppState {
 
   String supplierName(String id) => supplierById(id)?.name ?? '-';
   String dsrName(String id) => dsrById(id)?.name ?? '-';
-  String shopName(String id) => shopById(id)?.shopName ?? '-';
+  String shopName(String id) => shopById(id)?.shopName ?? 'Distributor';
   String productName(String id) => productById(id)?.name ?? '-';
 
   int dsrProductStock(String dsrId, String productId) {
-    for (final item in dsrStocks) {
-      if (item.dsrId == dsrId && item.productId == productId) {
-        return item.quantity;
-      }
-    }
-    return 0;
+    // Stock is controlled by the distributor/warehouse only.
+    // DSR is used for sales/report ownership, not for separate stock holding.
+    return productById(productId)?.warehouseStock ?? 0;
+  }
+
+  int distributorProductStock(String productId) {
+    return productById(productId)?.warehouseStock ?? 0;
   }
 
   int get lowStockCount {
     return products.where((item) => item.warehouseStock <= item.lowStockLimit).length;
   }
+
+  int get totalStockBox {
+    return products.fold<int>(0, (sum, item) => sum + item.warehouseStock);
+  }
+
+  int get totalStockCtn {
+    return products.fold<int>(0, (sum, item) {
+      final pack = item.packetsPerCarton <= 0 ? 1 : item.packetsPerCarton;
+      return sum + (item.warehouseStock ~/ pack);
+    });
+  }
+
+  int get totalLooseBox {
+    return products.fold<int>(0, (sum, item) {
+      final pack = item.packetsPerCarton <= 0 ? 1 : item.packetsPerCarton;
+      return sum + (item.warehouseStock % pack);
+    });
+  }
+
+  String get totalStockCtnBoxText => '$totalStockCtn CTN / $totalLooseBox Box';
+
 
   double get grossSale => sales.fold(0, (sum, item) => sum + item.total);
 
@@ -136,7 +158,7 @@ class AppState {
   double get claimAmount => claims.fold(0, (sum, item) => sum + item.amount);
   double get companyPayable => companyPurchases.fold(0, (sum, item) => sum + item.remainingAmount);
   double get purchaseTotal => companyPurchases.fold(0, (sum, item) => sum + item.totalBill);
-  double get marketCredit => shopkeepers.fold(0, (sum, item) => sum + item.pendingCredit);
+  double get marketCredit => creditSales - totalRecovery;
 
   double get stockValue {
     return products.fold(0, (sum, item) => sum + (item.warehouseStock * item.purchasePrice));
