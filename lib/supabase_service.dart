@@ -582,6 +582,22 @@ class SupabaseService {
     });
   }
 
+
+  Future<void> updateCompanyPurchasePayment({
+    required String purchaseId,
+    required double paidAmount,
+    required double remainingAmount,
+  }) async {
+    if (purchaseId.trim().isEmpty) throw Exception('Purchase ID is required');
+    final safePaid = paidAmount < 0 ? 0 : paidAmount;
+    final safeRemaining = remainingAmount < 0 ? 0 : remainingAmount;
+
+    await client.from('company_purchases').update({
+      'paid_amount': safePaid,
+      'remaining_amount': safeRemaining,
+    }).eq('id', purchaseId);
+  }
+
   Future<void> addClaim({
     required String companyId,
     required String productId,
@@ -881,5 +897,37 @@ class SupabaseService {
     await client.from('products').delete().eq('id', id);
   }
 
+
+
+  Future<void> resetCompanyData(String companyId) async {
+    if (companyId.trim().isEmpty) {
+      throw Exception('Company ID is required');
+    }
+
+    final cleanCompanyId = companyId.trim();
+
+    // Delete child/transaction tables first, then master tables.
+    // This keeps the user account and company profile safe, but removes app data.
+    final tables = [
+      'cash_counts',
+      'claims',
+      'deposits',
+      'expenses',
+      'recoveries',
+      'sales',
+      'load_entries',
+      'stock_movements',
+      'dsr_stocks',
+      'company_purchases',
+      'shopkeepers',
+      'products',
+      'dsrs',
+      'suppliers',
+    ];
+
+    for (final table in tables) {
+      await client.from(table).delete().eq('company_id', cleanCompanyId);
+    }
+  }
 
 }

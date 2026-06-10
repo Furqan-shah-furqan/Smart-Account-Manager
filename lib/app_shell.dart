@@ -50,6 +50,63 @@ class _AppShellState extends State<AppShell> {
     if (mounted) setState(() => busy = false);
   }
 
+  Future<void> confirmResetData() async {
+    final companyId = widget.state.profile?.companyId ?? '';
+
+    if (companyId.isEmpty) {
+      showSnack(context, 'Create company profile first.');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Reset all data?'),
+          content: const Text(
+            'Warning: if you tap Reset, all your app data will be removed permanently. This includes products, stock, primary receiving, sales, recovery, expenses, deposits, claims, DSR, salesman, and reports data. This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              icon: const Icon(Icons.delete_forever_rounded),
+              label: const Text('Reset'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => busy = true);
+    try {
+      await widget.state.service.resetCompanyData(companyId);
+      await widget.onChanged();
+      if (!mounted) return;
+      setState(() {
+        selectedIndex = 0;
+        busy = false;
+      });
+      showSnack(context, 'All app data has been reset.');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => busy = false);
+      showSnack(
+        context,
+        error.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
   bool get showingCompanySetup => selectedIndex == -1;
 
   String get pageTitle {
@@ -88,6 +145,11 @@ class _AppShellState extends State<AppShell> {
                   tooltip: 'Company',
                   onPressed: () => setState(() => selectedIndex = -1),
                   icon: const Icon(Icons.business_rounded),
+                ),
+                IconButton(
+                  tooltip: 'Reset Data',
+                  onPressed: confirmResetData,
+                  icon: const Icon(Icons.delete_forever_rounded, color: Colors.red),
                 ),
                 IconButton(
                   tooltip: 'Refresh',
@@ -393,6 +455,15 @@ class _AppShellState extends State<AppShell> {
                 label: const Text('Company'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: confirmResetData,
+                icon: const Icon(Icons.delete_forever_rounded, size: 17, color: Colors.red),
+                label: const Text('Reset', style: TextStyle(color: Colors.red)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  side: const BorderSide(color: Colors.red),
                 ),
               ),
               primaryButton('Refresh', Icons.refresh_rounded, refresh),

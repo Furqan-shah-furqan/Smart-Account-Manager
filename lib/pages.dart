@@ -2380,7 +2380,7 @@ class _ProductPageState extends State<ProductPage> {
             companyDiscount: discountAmount,
             paidAmount: 0,
             note:
-                'Primary Receiving • Company ${companyPercent.toStringAsFixed(2)}% • Trade Offer ${tradePercent.toStringAsFixed(2)}% • ${remarksController.text.trim()}',
+                'Primary Receiving • Distributor Type: $distributorType • Distributor: $distributor • Company ${companyPercent.toStringAsFixed(2)}% • Trade Offer ${tradePercent.toStringAsFixed(2)}% • ${remarksController.text.trim()}',
             extraUnits: units,
           );
         }
@@ -3247,6 +3247,7 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
       TextEditingController(text: DateTime.now().month.toString());
   final yearController =
       TextEditingController(text: DateTime.now().year.toString());
+      
 
   AppState get state => widget.state;
 
@@ -6548,51 +6549,348 @@ class DepositPage extends StatefulWidget {
 }
 
 class _DepositPageState extends State<DepositPage> {
-  final fromController = TextEditingController();
-  final toController = TextEditingController();
-  final partyController = TextEditingController();
+  String selectedDistributor = 'All Selected';
+  String selectedParty = 'All Selected';
+
+  AppState get state => widget.state;
+
+  List<String> _uniqueValues(Iterable<String> values) {
+    final clean = values
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return ['All Selected', ...clean];
+  }
+
+  String _distributorFromPurchase(CompanyPurchase purchase) {
+    final note = purchase.note;
+    final marker = RegExp(r'Distributor:\s*([^•]+)', caseSensitive: false)
+        .firstMatch(note);
+    final fromNote = marker?.group(1)?.trim() ?? '';
+    if (fromNote.isNotEmpty) return fromNote;
+
+    final companyName = state.company?.name.trim() ?? '';
+    if (companyName.isNotEmpty) return companyName;
+    return 'Distributor';
+  }
+
+  String _partyFromPurchase(CompanyPurchase purchase) {
+    if (purchase.companyName.trim().isNotEmpty) {
+      return purchase.companyName.trim();
+    }
+    final product = state.productById(purchase.productId);
+    if ((product?.brand.trim() ?? '').isNotEmpty) return product!.brand.trim();
+    return 'Party';
+  }
+
+  List<String> get distributorOptions {
+    return _uniqueValues(state.companyPurchases.map(_distributorFromPurchase));
+  }
+
+  List<String> get partyOptions {
+    return _uniqueValues(state.companyPurchases.map(_partyFromPurchase));
+  }
+
+  bool _matches(String selected, String value) {
+    return selected == 'All Selected' || selected == value;
+  }
+
+  List<CompanyPurchase> get selectedPurchases {
+    final rows = state.companyPurchases.where((purchase) {
+      return _matches(selectedDistributor, _distributorFromPurchase(purchase)) &&
+          _matches(selectedParty, _partyFromPurchase(purchase));
+    }).toList();
+    rows.sort((a, b) => b.date.compareTo(a.date));
+    return rows;
+  }
+
+  double get totalBill {
+    return selectedPurchases.fold<double>(0, (sum, item) => sum + item.totalBill);
+  }
+
+  double get paidTotal {
+    return selectedPurchases.fold<double>(0, (sum, item) => sum + item.paidAmount);
+  }
+
+  double get pendingTotal {
+    return selectedPurchases.fold<double>(0, (sum, item) => sum + item.remainingAmount);
+  }
+
+  String get selectedPartyName {
+    if (selectedParty != 'All Selected') return selectedParty;
+    if (selectedPurchases.isNotEmpty) return _partyFromPurchase(selectedPurchases.first);
+    return 'Company Payment';
+  }
+
+  Widget _depositDropdown({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String> onChanged,
+  }) {
+    final safeItems = items.isEmpty ? ['All Selected'] : items;
+    final safeValue = safeItems.contains(value) ? value : safeItems.first;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 180,
+          child: Text(
+            '$label :',
+            style: const TextStyle(
+              color: Color(0xff6b7280),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: safeValue,
+            decoration: const InputDecoration(isDense: true),
+            items: safeItems
+                .map((item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(item, overflow: TextOverflow.ellipsis),
+                    ))
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              onChanged(value);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void showPaySelectedPartyDialog() {
+    if (selectedPurchases.isEmpty) {
+      showSnack(context, 'No primary receiving found for selected filters.');
+      return;
+    }
+    if (pendingTotal <= 0) {
+      showSnack(context, 'No pending amount for selected party.');
+      return;
+    }
+
+    final distributorName = selectedDistributor == 'All Selected'
+        ? _distributorFromPurchase(selectedPurchases.first)
+        : selectedDistributor;
+    final partyName = selectedPartyName;
+    final dateController = TextEditingController(text: state.today);
+    final amountController = TextEditingController(text: pendingTotal.toStringAsFixed(0));
+
+    statefulDialog(
+      context: context,
+      title: 'Pay Company Deposit',
+      builder: (setDialog) {
+        final amount = toDouble(amountController.text);
+        final afterPending = (pendingTotal - amount).clamp(0, double.infinity).toDouble();
+
+        return [
+          TextField(
+            readOnly: true,
+            controller: TextEditingController(text: distributorName),
+            decoration: const InputDecoration(labelText: 'Distributor'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            readOnly: true,
+            controller: TextEditingController(text: partyName),
+            decoration: const InputDecoration(labelText: 'Party'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            readOnly: true,
+            controller: dateController,
+            decoration: const InputDecoration(labelText: 'Current Date'),
+          ),
+          textInput(
+            label: 'Pay Amount',
+            controller: amountController,
+            number: true,
+            onChanged: (_) => setDialog(() {}),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xfff8fafc),
+              border: Border.all(color: const Color(0xffe5e7eb)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Total bill: ${state.rs(totalBill)}'),
+                Text('Already paid: ${state.rs(paidTotal)}'),
+                Text('Current pending: ${state.rs(pendingTotal)}'),
+                Text(
+                  'Pending after this payment: ${state.rs(afterPending)}',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+          ),
+        ];
+      },
+      onSave: () async {
+        final amount = toDouble(amountController.text);
+        if (amount <= 0) throw Exception('Amount must be greater than 0');
+        if (amount > pendingTotal) {
+          throw Exception('Amount cannot be greater than pending total');
+        }
+
+        await runAction(
+          context,
+          () async {
+            double remainingPay = amount;
+            final pendingRows = selectedPurchases
+                .where((purchase) => purchase.remainingAmount > 0)
+                .toList()
+              ..sort((a, b) => a.date.compareTo(b.date));
+
+            for (final purchase in pendingRows) {
+              if (remainingPay <= 0) break;
+              final payForInvoice = remainingPay > purchase.remainingAmount
+                  ? purchase.remainingAmount
+                  : remainingPay;
+              final newPaid = purchase.paidAmount + payForInvoice;
+              final newRemaining = (purchase.remainingAmount - payForInvoice)
+                  .clamp(0, double.infinity)
+                  .toDouble();
+
+              await state.service.updateCompanyPurchasePayment(
+                purchaseId: purchase.id,
+                paidAmount: newPaid,
+                remainingAmount: newRemaining,
+              );
+
+              remainingPay -= payForInvoice;
+            }
+
+            await state.service.addDeposit(
+              companyId: state.companyId,
+              party: partyName,
+              notes: const {
+                5000: 0,
+                1000: 0,
+                500: 0,
+                100: 0,
+                50: 0,
+                20: 0,
+                10: 0,
+              },
+              coins: amount,
+            );
+          },
+          widget.onChanged,
+        );
+
+        if (mounted) setState(() {});
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final state = widget.state;
-
-    final rows = state.deposits.where((x) {
-      final dateOk =
-          dateInRange(x.date, fromController.text, toController.text);
-      final partyOk = partyController.text.trim().isEmpty ||
-          x.party
-              .toLowerCase()
-              .contains(partyController.text.trim().toLowerCase());
-      return dateOk && partyOk;
-    }).toList();
+    final rows = selectedPurchases;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        moduleHeader(
-          title: 'Deposit',
-          subtitle: 'Add party/bank deposit with cash denomination.',
-          buttonText: 'Add Deposit',
-          icon: Icons.account_balance_rounded,
-          onTap: () => showDepositDialog(context, state, widget.onChanged),
+        DataCard(
+          title: 'Primary Orders',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _depositDropdown(
+                label: 'Select Distributor',
+                value: selectedDistributor,
+                items: distributorOptions,
+                onChanged: (value) => setState(() => selectedDistributor = value),
+              ),
+              const SizedBox(height: 12),
+              _depositDropdown(
+                label: 'Select Party',
+                value: selectedParty,
+                items: partyOptions,
+                onChanged: (value) => setState(() => selectedParty = value),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  StatCard(
+                    title: 'Total Bill',
+                    value: state.rs(totalBill),
+                    icon: Icons.receipt_long_rounded,
+                    color: Colors.indigo,
+                  ),
+                  StatCard(
+                    title: 'Paid',
+                    value: state.rs(paidTotal),
+                    icon: Icons.payments_rounded,
+                    color: Colors.green,
+                  ),
+                  StatCard(
+                    title: 'Pending',
+                    value: state.rs(pendingTotal),
+                    icon: Icons.pending_actions_rounded,
+                    color: Colors.red,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
+                  onPressed: showPaySelectedPartyDialog,
+                  icon: const Icon(Icons.add_card_rounded),
+                  label: const Text('Pay Amount'),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 18),
-        filterCard(
-          title: 'Deposit Filters',
-          children: [
-            filterText('From Date', fromController),
-            filterText('To Date', toController),
-            filterText('Party / Bank', partyController),
-            clearFilterButton(() {
-              setState(() {
-                fromController.clear();
-                toController.clear();
-                partyController.clear();
-              });
-            }),
-          ],
+        DataCard(
+          title: 'Primary Receiving From Selected Party',
+          child: rows.isEmpty
+              ? emptyBox('No primary receiving found for selected distributor and party.')
+              : horizontalTable(
+                  DataTable(
+                    columns: const [
+                      DataColumn(label: Text('Date')),
+                      DataColumn(label: Text('Invoice')),
+                      DataColumn(label: Text('Product')),
+                      DataColumn(label: Text('Distributor')),
+                      DataColumn(label: Text('Party')),
+                      DataColumn(label: Text('Total Bill')),
+                      DataColumn(label: Text('Paid')),
+                      DataColumn(label: Text('Pending')),
+                    ],
+                    rows: rows.map((purchase) {
+                      return DataRow(cells: [
+                        DataCell(Text(formatDateForUi(purchase.date))),
+                        DataCell(Text(purchase.invoiceNo.isEmpty ? '-' : purchase.invoiceNo)),
+                        DataCell(Text(state.productName(purchase.productId))),
+                        DataCell(Text(_distributorFromPurchase(purchase))),
+                        DataCell(Text(_partyFromPurchase(purchase))),
+                        DataCell(Text(state.rs(purchase.totalBill))),
+                        DataCell(Text(state.rs(purchase.paidAmount))),
+                        DataCell(Text(state.rs(purchase.remainingAmount))),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
         ),
-        const SizedBox(height: 18),
-        depositTable(state, rows: rows),
+        const SizedBox(height: 90),
       ],
     );
   }
