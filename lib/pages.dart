@@ -1,5 +1,6 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -16,6 +17,7 @@ enum DashboardMetricType {
   balanceCash,
   marketCredit,
   stockValue,
+  totalInvestment,
   totalStockCtn,
   totalStockBox,
   profitEstimate,
@@ -33,16 +35,14 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cashTotal = state.cashSales +
+    final cashIn = state.cashSales +
         state.totalRecovery +
-        state.totalExpenses +
-        state.depositTotal;
-    final cashInPercent = cashTotal == 0
-        ? 0.0
-        : (state.cashSales + state.totalRecovery) / cashTotal;
-    final cashOutPercent = cashTotal == 0
-        ? 0.0
-        : (state.totalExpenses + state.depositTotal) / cashTotal;
+        state.totalOtherCashInflows +
+        state.cashInvestment;
+    final cashOut = state.totalExpenseOutflows + state.depositTotal;
+    final cashTotal = cashIn + cashOut;
+    final cashInPercent = cashTotal == 0 ? 0.0 : cashIn / cashTotal;
+    final cashOutPercent = cashTotal == 0 ? 0.0 : cashOut / cashTotal;
     final stockHealth = state.products.isEmpty
         ? 0.0
         : (state.products.length - state.lowStockCount) / state.products.length;
@@ -98,6 +98,13 @@ class DashboardPage extends StatelessWidget {
                 onTap: () =>
                     openMetric(context, DashboardMetricType.marketCredit)),
             StatCard(
+                title: 'Total Investment',
+                value: state.rs(state.totalInvestment),
+                icon: Icons.savings_rounded,
+                color: Colors.lightGreen,
+                onTap: () =>
+                    openMetric(context, DashboardMetricType.totalInvestment)),
+            StatCard(
                 title: 'Stock Value',
                 value: state.rs(state.stockValue),
                 icon: Icons.inventory_2_rounded,
@@ -135,14 +142,14 @@ class DashboardPage extends StatelessWidget {
               children: [
                 StatusBar(
                     title: 'Cash In',
-                    value: state.rs(state.cashSales + state.totalRecovery),
+                    value: state.rs(cashIn),
                     percent: cashInPercent,
                     color: Colors.green,
                     icon: Icons.call_received_rounded),
                 const SizedBox(height: 18),
                 StatusBar(
                     title: 'Cash Out',
-                    value: state.rs(state.totalExpenses + state.depositTotal),
+                    value: state.rs(cashOut),
                     percent: cashOutPercent,
                     color: Colors.red,
                     icon: Icons.call_made_rounded),
@@ -314,6 +321,7 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
   final dayController = TextEditingController();
   final monthController = TextEditingController();
   final yearController = TextEditingController();
+  final searchController = TextEditingController();
 
   AppState get state => widget.state;
 
@@ -330,6 +338,7 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
     dayController.dispose();
     monthController.dispose();
     yearController.dispose();
+    searchController.dispose();
     super.dispose();
   }
 
@@ -349,6 +358,8 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
         return 'Market Credit History';
       case DashboardMetricType.stockValue:
         return 'Stock Value History';
+      case DashboardMetricType.totalInvestment:
+        return 'Investment History';
       case DashboardMetricType.totalStockCtn:
         return 'Total Stock CTN Details';
       case DashboardMetricType.totalStockBox:
@@ -374,6 +385,8 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
         return Icons.store_rounded;
       case DashboardMetricType.stockValue:
         return Icons.inventory_2_rounded;
+      case DashboardMetricType.totalInvestment:
+        return Icons.savings_rounded;
       case DashboardMetricType.totalStockCtn:
         return Icons.inventory_rounded;
       case DashboardMetricType.totalStockBox:
@@ -400,6 +413,8 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
         return Colors.orange;
       case DashboardMetricType.stockValue:
         return Colors.indigo;
+      case DashboardMetricType.totalInvestment:
+        return Colors.lightGreen;
       case DashboardMetricType.totalStockCtn:
         return Colors.blueGrey;
       case DashboardMetricType.totalStockBox:
@@ -434,9 +449,29 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
   }
 
   List<SaleEntry> filteredSales({SaleType? type}) {
+    final query = widget.metric == DashboardMetricType.grossSale
+        ? searchController.text.trim().toLowerCase()
+        : '';
+
     return state.sales.where((sale) {
       if (type != null && sale.type != type) return false;
-      return dateOk(sale.date);
+      if (!dateOk(sale.date)) return false;
+      if (query.isEmpty) return true;
+
+      final dsr = state.dsrById(sale.dsrId);
+      final dsrName = state.dsrName(sale.dsrId).toLowerCase();
+      final salesmanName =
+          state.supplierName(dsr?.supplierId ?? '').toLowerCase();
+      final saleType =
+          sale.type == SaleType.cash ? 'cash cash sale' : 'credit credit sale';
+      final searchable = [
+        sale.billNo.toLowerCase(),
+        dsrName,
+        salesmanName,
+        saleType,
+      ].join(' ');
+
+      return searchable.contains(query);
     }).toList();
   }
 
@@ -460,6 +495,10 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
     return state.companyPurchases.where((item) => dateOk(item.date)).toList();
   }
 
+  List<InvestmentEntry> filteredInvestments() {
+    return state.investments.where((item) => dateOk(item.date)).toList();
+  }
+
   double get filteredTotal {
     switch (widget.metric) {
       case DashboardMetricType.grossSale:
@@ -478,11 +517,18 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
             .fold<double>(0, (sum, item) => sum + item.total);
         final recovery = filteredRecoveries()
             .fold<double>(0, (sum, item) => sum + item.receivedAmount);
+        final inflows = filteredExpenses()
+            .where((item) => AppState.cashInExpenseTypes.contains(item.type))
+            .fold<double>(0, (sum, item) => sum + item.amount);
         final expenses = filteredExpenses()
+            .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
+            .fold<double>(0, (sum, item) => sum + item.amount);
+        final investments = filteredInvestments()
+            .where((item) => item.isCash)
             .fold<double>(0, (sum, item) => sum + item.amount);
         final deposits =
             filteredDeposits().fold<double>(0, (sum, item) => sum + item.total);
-        return cashSales + recovery - expenses - deposits;
+        return cashSales + recovery + inflows + investments - expenses - deposits;
       case DashboardMetricType.marketCredit:
         final creditSales = filteredSales(type: SaleType.credit)
             .fold<double>(0, (sum, item) => sum + item.total);
@@ -493,17 +539,22 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
         return creditSales + manualCredit - recovery;
       case DashboardMetricType.stockValue:
         return state.stockValue;
+      case DashboardMetricType.totalInvestment:
+        return filteredInvestments()
+            .fold<double>(0, (sum, item) => sum + item.amount);
       case DashboardMetricType.totalStockCtn:
         return state.totalStockCtn.toDouble();
       case DashboardMetricType.totalStockBox:
         return state.totalStockBox.toDouble();
       case DashboardMetricType.profitEstimate:
         final saleProfit = filteredSales().fold<double>(0, (sum, sale) {
-          final cost = (state.productById(sale.productId)?.purchasePrice ?? 0) *
-              sale.quantity;
-          return sum + sale.total - cost;
+          final unitCost = sale.purchaseCost > 0
+              ? sale.purchaseCost
+              : (state.productById(sale.productId)?.purchasePrice ?? 0);
+          return sum + sale.total - (unitCost * sale.quantity);
         });
         final expenses = filteredExpenses()
+            .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
             .fold<double>(0, (sum, item) => sum + item.amount);
         final claims =
             filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
@@ -580,9 +631,11 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
                                 fontSize: 20, fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Tap back to return to Dashboard. Use filters to check date, day, month, or year history.',
-                            style: TextStyle(color: Color(0xff6b7280)),
+                          Text(
+                            widget.metric == DashboardMetricType.grossSale
+                                ? 'Search by bill, DSR, salesman, cash or credit. Tap any row to open its product load form.'
+                                : 'Tap back to return to Dashboard. Use filters to check date, day, month, or year history.',
+                            style: const TextStyle(color: Color(0xff6b7280)),
                           ),
                         ],
                       ),
@@ -605,6 +658,12 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
                   filterInput('Month', monthController,
                       width: 110, number: true),
                   filterInput('Year', yearController, width: 110, number: true),
+                  if (widget.metric == DashboardMetricType.grossSale)
+                    filterInput(
+                      'Search Bill, DSR, Salesman or Type',
+                      searchController,
+                      width: 300,
+                    ),
                   clearFilterButton(() {
                     setState(() {
                       fromController.clear();
@@ -612,6 +671,7 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
                       dayController.clear();
                       monthController.clear();
                       yearController.clear();
+                      searchController.clear();
                     });
                   }),
                 ],
@@ -628,7 +688,12 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
   Widget metricTable() {
     switch (widget.metric) {
       case DashboardMetricType.grossSale:
-        return salesTable(state, rows: filteredSales());
+        return salesTable(
+          state,
+          rows: filteredSales(),
+          navigationContext: context,
+          enableGeneratedDetails: true,
+        );
       case DashboardMetricType.cashSale:
         return salesTable(state, rows: filteredSales(type: SaleType.cash));
       case DashboardMetricType.creditSale:
@@ -641,6 +706,8 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
         return marketCreditTable();
       case DashboardMetricType.stockValue:
         return stockValueTable();
+      case DashboardMetricType.totalInvestment:
+        return investmentHistoryTable();
       case DashboardMetricType.totalStockCtn:
         return stockQuantityTable(showCtn: true);
       case DashboardMetricType.totalStockBox:
@@ -783,12 +850,23 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
     }
 
     for (final expense in filteredExpenses()) {
+      final isInflow = AppState.cashInExpenseTypes.contains(expense.type);
       rows.add(_DashboardLedgerRow(
         date: expense.date,
-        type: 'Expense',
+        type: expense.type,
         party: state.dsrName(expense.dsrId),
-        detail: expense.type,
-        amount: -expense.amount,
+        detail: expense.note.isEmpty ? expense.type : expense.note,
+        amount: isInflow ? expense.amount : -expense.amount,
+      ));
+    }
+
+    for (final investment in filteredInvestments().where((item) => item.isCash)) {
+      rows.add(_DashboardLedgerRow(
+        date: investment.date,
+        type: 'Cash Investment',
+        party: investment.investorName,
+        detail: investment.displayType,
+        amount: investment.amount,
       ));
     }
 
@@ -974,6 +1052,32 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
     ).then((_) => setState(() {}));
   }
 
+  Widget investmentHistoryTable() {
+    return ledgerTable(
+      title: 'Investment History',
+      headers: const [
+        'Date',
+        'Investor',
+        'Type',
+        'Payment Method',
+        'Reference',
+        'Amount',
+        'Note'
+      ],
+      rows: filteredInvestments().map((item) {
+        return [
+          formatDateForUi(item.date),
+          item.investorName,
+          item.displayType,
+          item.displayPaymentMethod,
+          item.referenceNo.isEmpty ? '-' : item.referenceNo,
+          state.rs(item.amount),
+          item.note.isEmpty ? '-' : item.note,
+        ];
+      }).toList(),
+    );
+  }
+
   Widget stockQuantityTable({required bool showCtn}) {
     return DataCard(
       title: showCtn ? 'Total Stock CTN Details' : 'Total Stock Box Details',
@@ -1028,6 +1132,11 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
               ? emptyBox('No primary receiving products found.')
               : horizontalTable(
                   DataTable(
+                    columnSpacing: 6,
+                    horizontalMargin: 6,
+                    headingRowHeight: 42,
+                    dataRowMinHeight: 46,
+                    dataRowMaxHeight: 54,
                     columns: const [
                       DataColumn(label: Text('Product')),
                       DataColumn(label: Text('Brand')),
@@ -1110,8 +1219,10 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
             'Profit'
           ],
           rows: sales.map((sale) {
-            final product = state.productById(sale.productId);
-            final cost = (product?.purchasePrice ?? 0) * sale.quantity;
+            final unitCost = sale.purchaseCost > 0
+                ? sale.purchaseCost
+                : (state.productById(sale.productId)?.purchasePrice ?? 0);
+            final cost = unitCost * sale.quantity;
             final profit = sale.total - cost;
             return [
               formatDateForUi(sale.date),
@@ -1129,7 +1240,10 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
           title: 'Profit Deductions',
           headers: const ['Date', 'Type', 'Detail', 'Amount'],
           rows: [
-            ...filteredExpenses().map((expense) => [
+            ...filteredExpenses()
+                .where((expense) =>
+                    !AppState.cashInExpenseTypes.contains(expense.type))
+                .map((expense) => [
                   formatDateForUi(expense.date),
                   'Expense',
                   expense.type,
@@ -2096,297 +2210,195 @@ class ProductPage extends StatefulWidget {
 }
 
 class _ProductPageState extends State<ProductPage> {
-  final Map<String, TextEditingController> nameControllers = {};
-  final Map<String, TextEditingController> brandControllers = {};
-  final Map<String, TextEditingController> skuCodeControllers = {};
-  final Map<String, TextEditingController> unitControllers = {};
-  final Map<String, TextEditingController> cartonControllers = {};
-  final Map<String, TextEditingController> packControllers = {};
-  final Map<String, TextEditingController> minStockControllers = {};
-  final Map<String, TextEditingController> packetBuyControllers = {};
-  final Map<String, TextEditingController> packetSellControllers = {};
-  final remarksController = TextEditingController();
   final ScrollController skuHorizontalController = ScrollController();
-  final List<_PrimarySkuDraftRow> draftSkuRows = [];
+  final List<_PrimarySkuDraftRow> draftSkuRows = [_PrimarySkuDraftRow()];
 
   String distributorType = 'All Selected';
-  String distributor = 'AFRA TRADERS - GIGGLY RANGE B - KHI - 123456 [ D099 ]';
+  String distributor =
+      'AFRA TRADERS - GIGGLY RANGE B - KHI - 123456 [ D099 ]';
   String manufacturer = 'VOLKA FOOD INTERNATIONAL LTD.';
+  bool orderGenerated = false;
 
   AppState get state => widget.state;
 
   @override
-  void initState() {
-    super.initState();
-    draftSkuRows.add(_PrimarySkuDraftRow());
-  }
-
-  @override
   void dispose() {
-    for (final controller in [
-      ...nameControllers.values,
-      ...brandControllers.values,
-      ...skuCodeControllers.values,
-      ...unitControllers.values,
-      ...cartonControllers.values,
-      ...packControllers.values,
-      ...minStockControllers.values,
-      ...packetBuyControllers.values,
-      ...packetSellControllers.values,
-    ]) {
-      controller.dispose();
-    }
     for (final row in draftSkuRows) {
       row.dispose();
     }
     skuHorizontalController.dispose();
-    remarksController.dispose();
     super.dispose();
   }
 
-  TextEditingController _controllerFor(
-    Map<String, TextEditingController> map,
-    Product product,
-    String initial,
-  ) {
-    return map.putIfAbsent(
-        product.id, () => TextEditingController(text: initial));
-  }
+  int _pack(_PrimarySkuDraftRow row) =>
+      toInt(row.packController.text) <= 0 ? 0 : toInt(row.packController.text);
 
-  TextEditingController nameControllerFor(Product product) =>
-      _controllerFor(nameControllers, product, product.name);
-  TextEditingController brandControllerFor(Product product) =>
-      _controllerFor(brandControllers, product, product.brand);
-  TextEditingController skuCodeControllerFor(Product product) =>
-      _controllerFor(skuCodeControllers, product, product.sku);
-  TextEditingController unitControllerFor(Product product) =>
-      _controllerFor(unitControllers, product, '0');
-  TextEditingController cartonControllerFor(Product product) =>
-      _controllerFor(cartonControllers, product, '0');
-  TextEditingController packControllerFor(Product product) => _controllerFor(
-      packControllers,
-      product,
-      product.packetsPerCarton <= 0
-          ? '1'
-          : product.packetsPerCarton.toString());
-  TextEditingController minStockControllerFor(Product product) =>
-      _controllerFor(
-          minStockControllers, product, product.lowStockLimit.toString());
-  TextEditingController packetBuyControllerFor(Product product) =>
-      _controllerFor(
-          packetBuyControllers,
-          product,
-          product.purchasePrice.toStringAsFixed(
-              product.purchasePrice == product.purchasePrice.roundToDouble()
-                  ? 0
-                  : 2));
-  TextEditingController packetSellControllerFor(Product product) =>
-      _controllerFor(
-          packetSellControllers,
-          product,
-          product.sellingPrice.toStringAsFixed(
-              product.sellingPrice == product.sellingPrice.roundToDouble()
-                  ? 0
-                  : 2));
+  int _cartons(_PrimarySkuDraftRow row) =>
+      toInt(row.cartonsController.text).clamp(0, 1 << 31).toInt();
 
-  int unitsFor(Product product) => toInt(unitControllerFor(product).text);
-  int cartonsFor(Product product) => toInt(cartonControllerFor(product).text);
-  int packFor(Product product) => toInt(packControllerFor(product).text) <= 0
-      ? 1
-      : toInt(packControllerFor(product).text);
+  int totalBoxesFor(_PrimarySkuDraftRow row) => _cartons(row) * _pack(row);
 
-  int totalUnitsFor(Product product) {
-    return (cartonsFor(product) * packFor(product)) + unitsFor(product);
-  }
+  double grossFor(_PrimarySkuDraftRow row) =>
+      totalBoxesFor(row) * toDouble(row.packetBuyController.text);
 
-  double totalAmountFor(Product product) {
-    return totalUnitsFor(product) *
-        toDouble(packetSellControllerFor(product).text);
-  }
-
-  int get totalCartons {
-    return draftSkuRows.fold<int>(
-        0, (sum, row) => sum + toInt(row.cartonsController.text));
-  }
-
-  int get totalUnits {
-    return draftSkuRows.fold<int>(
-        0, (sum, row) => sum + totalUnitsForDraft(row));
-  }
-
-  double get totalAmount {
-    return draftSkuRows.fold<double>(
-        0, (sum, row) => sum + totalAmountForDraft(row));
-  }
-
-  int totalUnitsForDraft(_PrimarySkuDraftRow row) {
-    final pack = toInt(row.packController.text) <= 0
-        ? 1
-        : toInt(row.packController.text);
-    return (toInt(row.cartonsController.text) * pack) +
-        toInt(row.unitsController.text);
-  }
-
-  double grossAmountForDraft(_PrimarySkuDraftRow row) {
-    return totalUnitsForDraft(row) * toDouble(row.packetBuyController.text);
-  }
-
-  double discountAmountForDraft(_PrimarySkuDraftRow row) {
-    final gross = grossAmountForDraft(row);
-    final companyPercent =
+  double discountFor(_PrimarySkuDraftRow row) {
+    final company =
         toDouble(row.companyDiscountController.text).clamp(0, 100).toDouble();
-    final tradePercent =
+    final trade =
         toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
-    return gross * ((companyPercent + tradePercent) / 100);
+    return grossFor(row) * ((company + trade) / 100);
   }
 
-  double totalAmountForDraft(_PrimarySkuDraftRow row) {
-    return (grossAmountForDraft(row) - discountAmountForDraft(row))
-        .clamp(0, double.infinity)
-        .toDouble();
-  }
+  double netFor(_PrimarySkuDraftRow row) =>
+      (grossFor(row) - discountFor(row))
+          .clamp(0, double.infinity)
+          .toDouble();
+
+  int get totalCartons =>
+      draftSkuRows.fold(0, (sum, row) => sum + _cartons(row));
+
+  int get totalBoxes =>
+      draftSkuRows.fold(0, (sum, row) => sum + totalBoxesFor(row));
+
+  double get grossTotal =>
+      draftSkuRows.fold(0, (sum, row) => sum + grossFor(row));
+
+  double get discountTotal =>
+      draftSkuRows.fold(0, (sum, row) => sum + discountFor(row));
+
+  double get finalBill =>
+      draftSkuRows.fold(0, (sum, row) => sum + netFor(row));
 
   Product? productForDraft(_PrimarySkuDraftRow row) {
     if (row.selectedProductId.isNotEmpty) {
-      final found = state.products
-          .where((product) => product.id == row.selectedProductId)
-          .toList();
-      if (found.isNotEmpty) return found.first;
-    }
-
-    final query = row.skuController.text.trim().toLowerCase();
-    if (query.isEmpty) return null;
-    final exact = state.products.where((product) {
-      return product.name.toLowerCase() == query ||
-          product.sku.toLowerCase() == query;
-    }).toList();
-    return exact.isEmpty ? null : exact.first;
-  }
-
-  int alreadyOrderedQty(Product product) {
-    return state.sales
-        .where((sale) => sale.productId == product.id)
-        .fold<int>(0, (sum, sale) => sum + sale.quantity);
-  }
-
-  Future<void> attachDepositSlip() async {
-    final upload = html.FileUploadInputElement()
-      ..accept = 'image/*,.pdf'
-      ..click();
-
-    upload.onChange.listen((event) {
-      final file =
-          upload.files?.isNotEmpty == true ? upload.files!.first : null;
-      if (file != null && mounted) {
-        showSnack(context, 'Attached deposit slip: ${file.name}');
+      for (final product in state.products) {
+        if (product.id == row.selectedProductId) return product;
       }
+    }
+    final sku = row.skuCodeController.text.trim().toLowerCase();
+    if (sku.isNotEmpty) {
+      for (final product in state.products) {
+        if (product.sku.trim().toLowerCase() == sku) return product;
+      }
+    }
+    return null;
+  }
+
+  void _selectProduct(_PrimarySkuDraftRow row, Product product) {
+    setState(() {
+      orderGenerated = false;
+      row.selectedProductId = product.id;
+      row.nameController.text = product.name;
+      row.brandController.text = product.brand;
+      row.skuCodeController.text = product.sku;
+      row.packController.text = product.packetsPerCarton.toString();
+      row.minStockController.text = product.lowStockLimit.toString();
+      row.packetBuyController.text = _numberText(product.purchasePrice);
+      row.packetSellController.text = _numberText(product.sellingPrice);
+      row.companyDiscountController.text =
+          _numberText(product.companyDiscount);
+      row.tradeOfferController.text = _numberText(product.tradeDiscount);
     });
   }
 
+  String _numberText(double value) =>
+      value == value.roundToDouble() ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
+
   Future<void> generateOrder() async {
-    final rowsToSave = draftSkuRows
-        .where((row) => row.skuController.text.trim().isNotEmpty)
+    final rows = draftSkuRows
+        .where((row) =>
+            row.nameController.text.trim().isNotEmpty ||
+            row.skuCodeController.text.trim().isNotEmpty)
         .toList();
 
-    if (rowsToSave.isEmpty) {
-      showSnack(context, 'Type or search SKU/product first.');
+    if (rows.isEmpty) {
+      showSnack(context, 'Add at least one product row.');
       return;
     }
 
-    final rowsWithQty =
-        rowsToSave.where((row) => totalUnitsForDraft(row) > 0).toList();
-    if (rowsWithQty.isEmpty) {
-      showSnack(context, 'Enter quantity in CTN or Box first.');
-      return;
+    final seenSkus = <String>{};
+    final items = <Map<String, dynamic>>[];
+
+    for (final row in rows) {
+      final name = row.nameController.text.trim();
+      final sku = row.skuCodeController.text.trim();
+      final cartons = _cartons(row);
+      final pack = _pack(row);
+      final purchase = toDouble(row.packetBuyController.text);
+      final selling = toDouble(row.packetSellController.text);
+      final companyPct =
+          toDouble(row.companyDiscountController.text).clamp(0, 100).toDouble();
+      final tradePct =
+          toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
+
+      if (name.isEmpty) {
+        showSnack(context, 'Product/SKU name is required.');
+        return;
+      }
+      if (sku.isEmpty) {
+        showSnack(context, 'SKU code is required for $name.');
+        return;
+      }
+      if (!seenSkus.add(sku.toLowerCase())) {
+        showSnack(context, 'Duplicate SKU code in this order: $sku');
+        return;
+      }
+      if (cartons <= 0) {
+        showSnack(context, 'Quantity CTN must be greater than 0 for $name.');
+        return;
+      }
+      if (pack <= 0) {
+        showSnack(context, 'Boxes per CTN must be greater than 0 for $name.');
+        return;
+      }
+      if (purchase <= 0) {
+        showSnack(context, 'Purchase price must be greater than 0 for $name.');
+        return;
+      }
+      if (selling <= 0) {
+        showSnack(context, 'Selling price must be greater than 0 for $name.');
+        return;
+      }
+      if (companyPct + tradePct > 100) {
+        showSnack(context,
+            'Company discount and trade offer cannot exceed 100% for $name.');
+        return;
+      }
+
+      items.add({
+        'name': name,
+        'brand': row.brandController.text.trim(),
+        'sku': sku,
+        'cartons': cartons,
+        'packets_per_carton': pack,
+        'minimum_stock': toInt(row.minStockController.text).clamp(0, 1 << 31).toInt(),
+        'purchase_price': purchase,
+        'selling_price': selling,
+        'company_discount_percent': companyPct,
+        'trade_offer_percent': tradePct,
+      });
     }
 
-    final generatedUnits = totalUnits;
-    final generatedAmount = totalAmount;
     final invoiceNo = 'PR-${DateTime.now().millisecondsSinceEpoch}';
+    bool saved = false;
+    Map<String, dynamic> result = {};
 
     await runAction(
       context,
       () async {
-        for (final row in rowsWithQty) {
-          final pack = toInt(row.packController.text) <= 0
-              ? 1
-              : toInt(row.packController.text);
-          final cartons = toInt(row.cartonsController.text);
-          final units = toInt(row.unitsController.text);
-          final buyPrice = toDouble(row.packetBuyController.text);
-          final sellPrice = toDouble(row.packetSellController.text) <= 0
-              ? buyPrice
-              : toDouble(row.packetSellController.text);
-          final companyPercent = toDouble(row.companyDiscountController.text)
-              .clamp(0, 100)
-              .toDouble();
-          final tradePercent =
-              toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
-          final discountAmount = discountAmountForDraft(row);
-          Product? existingProduct = productForDraft(row);
-          String productId = existingProduct?.id ?? '';
-
-          if (existingProduct == null) {
-            productId = await state.service.addProductReturningId(
-              companyId: state.companyId,
-              name: row.skuController.text.trim(),
-              sku: row.skuCodeController.text.trim().isEmpty
-                  ? 'SKU-${DateTime.now().millisecondsSinceEpoch}'
-                  : row.skuCodeController.text.trim(),
-              category: 'Primary Receiving',
-              brand: row.brandController.text.trim(),
-              batchNo: '',
-              mfgDate: '',
-              expDate: '',
-              purchasePrice: buyPrice,
-              sellingPrice: sellPrice,
-              warehouseStock: 0,
-              lowStockLimit: toInt(row.minStockController.text),
-              packetsPerCarton: pack,
-              companyDiscount: companyPercent,
-              tradeDiscount: tradePercent,
-            );
-          } else {
-            await state.service.updateProduct(
-              id: existingProduct.id,
-              name: row.skuController.text.trim().isEmpty
-                  ? existingProduct.name
-                  : row.skuController.text.trim(),
-              sku: row.skuCodeController.text.trim(),
-              category: existingProduct.category,
-              brand: row.brandController.text.trim(),
-              batchNo: existingProduct.batchNo,
-              mfgDate: existingProduct.mfgDate,
-              expDate: existingProduct.expDate,
-              purchasePrice: buyPrice,
-              sellingPrice: sellPrice,
-              warehouseStock: existingProduct.warehouseStock,
-              lowStockLimit: toInt(row.minStockController.text),
-              packetsPerCarton: pack,
-              companyDiscount: companyPercent,
-              tradeDiscount: tradePercent,
-            );
-          }
-
-          await state.service.addCompanyPurchase(
-            companyId: state.companyId,
-            invoiceNo: invoiceNo,
-            companyName: manufacturer,
-            productId: productId,
-            batchNo: row.skuCodeController.text.trim(),
-            cartons: cartons,
-            packetsPerCarton: pack,
-            packetPurchasePrice: buyPrice,
-            companyDiscount: discountAmount,
-            paidAmount: 0,
-            note:
-                'Primary Receiving • Distributor Type: $distributorType • Distributor: $distributor • Company ${companyPercent.toStringAsFixed(2)}% • Trade Offer ${tradePercent.toStringAsFixed(2)}% • ${remarksController.text.trim()}',
-            extraUnits: units,
-          );
-        }
+        result = await state.service.createPrimaryReceiving(
+          companyId: state.companyId,
+          invoiceNo: invoiceNo,
+          distributor: distributor.trim(),
+          manufacturer: manufacturer.trim(),
+          items: items,
+        );
+        saved = true;
       },
       widget.onChanged,
     );
+
+    if (!saved || !mounted) return;
 
     for (final row in draftSkuRows) {
       row.dispose();
@@ -2394,19 +2406,16 @@ class _ProductPageState extends State<ProductPage> {
     draftSkuRows
       ..clear()
       ..add(_PrimarySkuDraftRow());
-    remarksController.clear();
 
-    if (mounted) {
-      setState(() {});
-      showSnack(context,
-          'Primary receiving saved to stock and company ledger: $generatedUnits box • ${state.rs(generatedAmount)}');
-    }
-  }
-
-  void addFreshSkuRow() {
-    setState(() {
-      draftSkuRows.add(_PrimarySkuDraftRow());
-    });
+    setState(() => orderGenerated = true);
+    showSnack(
+      context,
+      'Primary receiving generated: ${asInt(result['total_boxes'])} boxes • '
+      'Gross ${state.rs(asDouble(result['gross_total']))} • '
+      'Discount ${state.rs(asDouble(result['discount_total']))} • '
+      'Final ${state.rs(asDouble(result['final_bill']))}',
+      type: AppToastType.success,
+    );
   }
 
   @override
@@ -2417,58 +2426,104 @@ class _ProductPageState extends State<ProductPage> {
         DataCard(
           title: 'Primary Receiving',
           child: const Text(
-            'Add same or new company SKUs directly in the receiving sheet. When you generate the order, existing product stock updates and new SKUs are saved.',
+            'Create or receive products. Quantity, packing, prices and discounts are saved to stock, ledger, deposit and reports.',
             style: TextStyle(color: Color(0xff6b7280), height: 1.5),
           ),
         ),
         const SizedBox(height: 18),
-        primaryReceivingOrderCard(),
-        const SizedBox(height: 18),
+        DataCard(
+          title: 'Primary Orders',
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 980;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _topControls(compact),
+                  const SizedBox(height: 24),
+                  _table(),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 14,
+                    children: [
+                      StatCard(
+                        title: 'Total CTN',
+                        value: totalCartons.toString(),
+                        icon: Icons.inventory_2_rounded,
+                        color: Colors.blueGrey,
+                      ),
+                      StatCard(
+                        title: 'Total Boxes',
+                        value: totalBoxes.toString(),
+                        icon: Icons.widgets_rounded,
+                        color: Colors.indigo,
+                      ),
+                      StatCard(
+                        title: 'Gross Purchase',
+                        value: state.rs(grossTotal),
+                        icon: Icons.receipt_long_rounded,
+                        color: Colors.blue,
+                      ),
+                      StatCard(
+                        title: 'Total Discount',
+                        value: state.rs(discountTotal),
+                        icon: Icons.percent_rounded,
+                        color: Colors.orange,
+                      ),
+                      StatCard(
+                        title: 'Final Bill',
+                        value: state.rs(finalBill),
+                        icon: Icons.calculate_rounded,
+                        color: Colors.green,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: SizedBox(
+                      width: compact ? double.infinity : 250,
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: generateOrder,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: orderGenerated
+                              ? Colors.green
+                              : Colors.green.shade100,
+                          foregroundColor: orderGenerated
+                              ? Colors.white
+                              : Colors.green.shade900,
+                          elevation: orderGenerated ? 2 : 0,
+                        ),
+                        icon: Icon(
+                          orderGenerated
+                              ? Icons.done_rounded
+                              : Icons.receipt_long_rounded,
+                        ),
+                        label: Text(
+                          orderGenerated
+                              ? 'Order Generated'
+                              : 'Generate Order',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
         const SizedBox(height: 90),
       ],
     );
   }
 
-  Widget primaryReceivingOrderCard() {
-    return DataCard(
-      title: 'Primary Orders',
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 980;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _orderTopControls(isCompact: isCompact),
-              const SizedBox(height: 28),
-              Text(
-                'SKUs',
-                style: TextStyle(
-                  fontSize: isCompact ? 24 : 30,
-                  fontWeight: FontWeight.w300,
-                  color: AppTheme.dark,
-                  letterSpacing: -0.6,
-                ),
-              ),
-              const SizedBox(height: 14),
-              state.products.isEmpty && draftSkuRows.isEmpty
-                  ? emptyBox(
-                      'No SKU rows yet. Tap Add New Row to create a fresh empty SKU line.')
-                  : _responsiveSkuTable(constraints.maxWidth),
-              const SizedBox(height: 14),
-              _orderFooter(isCompact: isCompact),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _orderTopControls({required bool isCompact}) {
-    final controlWidth = isCompact ? double.infinity : 520.0;
+  Widget _topControls(bool compact) {
     const distributorTypes = [
       'All Selected',
       'Selected Distributor',
-      'Range Wise'
+      'Range Wise',
     ];
     const distributors = [
       'AFRA TRADERS - GIGGLY RANGE B - KHI - 123456 [ D099 ]',
@@ -2480,114 +2535,172 @@ class _ProductPageState extends State<ProductPage> {
       'GIGGLY',
     ];
 
-    String safeValue(String current, List<String> options) {
-      return options.contains(current) ? current : options.first;
+    Widget editableSelector(
+      String label,
+      String value,
+      List<String> suggestions,
+      ValueChanged<String> onChanged,
+    ) {
+      return SizedBox(
+        width: compact ? double.infinity : 480,
+        child: Autocomplete<String>(
+          initialValue: TextEditingValue(text: value),
+          displayStringForOption: (option) => option,
+          optionsBuilder: (textValue) {
+            final query = textValue.text.trim().toLowerCase();
+            if (query.isEmpty) return suggestions;
+            return suggestions.where(
+              (option) => option.toLowerCase().contains(query),
+            );
+          },
+          onSelected: (selection) {
+            setState(() {
+              orderGenerated = false;
+              onChanged(selection);
+            });
+          },
+          fieldViewBuilder: (
+            context,
+            controller,
+            focusNode,
+            onFieldSubmitted,
+          ) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                labelText: label,
+                suffixIcon: const Icon(Icons.edit_rounded, size: 19),
+              ),
+              onChanged: (text) {
+                setState(() {
+                  orderGenerated = false;
+                  onChanged(text);
+                });
+              },
+              onSubmitted: (_) => onFieldSubmitted(),
+            );
+          },
+        ),
+      );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _selectLine(
-          label: 'Select Distributor Type :',
-          width: controlWidth,
-          child: _safePrimaryDropdown(
-            value: safeValue(distributorType, distributorTypes),
-            options: distributorTypes,
-            onChanged: (value) => setState(() => distributorType = value),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _selectLine(
-          label: 'Select Distributor :',
-          width: controlWidth,
-          child: _safePrimaryDropdown(
-            value: safeValue(distributor, distributors),
-            options: distributors,
-            onChanged: (value) => setState(() => distributor = value),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _selectLine(
-          label: 'Select Manufacturer :',
-          width: controlWidth,
-          child: _safePrimaryDropdown(
-            value: safeValue(manufacturer, manufacturers),
-            options: manufacturers,
-            onChanged: (value) => setState(() => manufacturer = value),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _safePrimaryDropdown({
-    required String value,
-    required List<String> options,
-    required ValueChanged<String> onChanged,
-  }) {
-    final uniqueOptions = options.toSet().toList();
-
-    return DropdownButtonFormField<String>(
-      value: uniqueOptions.contains(value) ? value : uniqueOptions.first,
-      isExpanded: true,
-      decoration: const InputDecoration(isDense: true),
-      items: uniqueOptions.map((option) {
-        return DropdownMenuItem<String>(
-          value: option,
-          child: Text(option, maxLines: 1, overflow: TextOverflow.ellipsis),
-        );
-      }).toList(),
-      onChanged: (value) {
-        if (value != null) onChanged(value);
-      },
-    );
-  }
-
-  Widget _selectLine(
-      {required String label, required double width, required Widget child}) {
     return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 14,
+      runSpacing: 14,
       children: [
-        SizedBox(
-          width: 210,
-          child: Text(label,
-              style: const TextStyle(
-                  color: Color(0xff6b7280), fontWeight: FontWeight.w600)),
+        editableSelector(
+          'Distributor Type',
+          distributorType,
+          distributorTypes,
+          (value) => distributorType = value,
         ),
-        SizedBox(width: width, child: child),
+        editableSelector(
+          'Distributor',
+          distributor,
+          distributors,
+          (value) => distributor = value,
+        ),
+        editableSelector(
+          'Manufacturer / Party',
+          manufacturer,
+          manufacturers,
+          (value) => manufacturer = value,
+        ),
       ],
     );
   }
 
-  Widget _responsiveSkuTable(double availableWidth) {
-    // The real row width is 1376px. We keep the table at this exact width
-    // and let the horizontal scroll view handle smaller spaces. This prevents
-    // yellow RenderFlex overflow when the sidebar opens or closes.
-    const tableWidth = 1376.0;
+  Widget _table() {
+    const widths = <double>[
+      42,
+      220,
+      120,
+      105,
+      80,
+      90,
+      90,
+      90,
+      105,
+      105,
+      90,
+      90,
+      105,
+      105,
+      110,
+      58,
+    ];
+    const labels = [
+      'S#',
+      'Product / SKU',
+      'Brand',
+      'SKU Code',
+      'Qty CTN',
+      'Boxes / CTN',
+      'Total Boxes',
+      'Min Stock',
+      'Purchase / Box',
+      'Selling / Box',
+      'Company %',
+      'Trade Offer %',
+      'Gross',
+      'Discount',
+      'Net Total',
+      '',
+    ];
+    final tableWidth = widths.fold<double>(0, (sum, item) => sum + item);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xffe5e7eb)),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Scrollbar(
+      child: Scrollbar(
+        controller: skuHorizontalController,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
           controller: skuHorizontalController,
-          thumbVisibility: true,
-          trackVisibility: true,
-          thickness: 8,
-          radius: const Radius.circular(99),
-          child: SingleChildScrollView(
-            controller: skuHorizontalController,
-            scrollDirection: Axis.horizontal,
-            primary: false,
-            child: SizedBox(
-              width: tableWidth,
-              child: _skuTable(tableWidth),
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: tableWidth,
+            child: Column(
+              children: [
+                Row(
+                  children: List.generate(
+                    labels.length,
+                    (index) => _cell(
+                      widths[index],
+                      labels[index],
+                      header: true,
+                      center: true,
+                      height: 64,
+                    ),
+                  ),
+                ),
+                ...draftSkuRows.asMap().entries.map(
+                      (entry) => _row(entry.key, entry.value, widths),
+                    ),
+                InkWell(
+                  onTap: () => setState(() {
+                    orderGenerated = false;
+                    draftSkuRows.add(_PrimarySkuDraftRow());
+                  }),
+                  child: Container(
+                    height: 38,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xfff8fafc),
+                      border: Border.all(color: const Color(0xffe5e7eb)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.add_box_rounded, size: 17),
+                        SizedBox(width: 7),
+                        Text('Add New Row',
+                            style: TextStyle(fontWeight: FontWeight.w800)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -2595,564 +2708,200 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  Widget _skuTable(double tableWidth) {
-    final draftRows = draftSkuRows.asMap().entries.map((entry) {
-      return _draftSkuTableRow(
-        index: entry.key + 1,
-        row: entry.value,
-        tableWidth: tableWidth,
-      );
-    }).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _skuHeaderRow(tableWidth),
-        ...draftRows,
-        _addNewRow(tableWidth),
-        _totalRow(tableWidth),
-      ],
-    );
-  }
-
-  List<double> _columnWidths(double tableWidth) {
-    // Sum = 1376. This exactly matches the table SizedBox width above.
-    return const <double>[
-      38,
-      250,
-      86,
-      86,
-      68,
-      72,
-      76,
-      76,
-      72,
-      72,
-      72,
-      76,
-      76,
-      78,
-      86,
-      92
-    ];
-  }
-
-  Widget _skuHeaderRow(double tableWidth) {
-    final widths = _columnWidths(tableWidth);
-    final labels = [
-      'S#',
-      'SKU',
-      'Brand\nName',
-      'SKU\nCode',
-      'Qty\nCTN',
-      'Qty\nBox',
-      'Available\nBox',
-      'Already\nOrdered',
-      'Current\nTarget',
-      'Next\nTarget',
-      'Min\nStock',
-      'Excl\nGST',
-      'Incl\nGST',
-      'Company\n%',
-      'Trade\nOffer',
-      'Total Price',
-    ];
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xfff8fafc),
-        border:
-            Border(bottom: BorderSide(color: Color(0xffdbeafe), width: 1.2)),
-      ),
-      child: Row(
-        children: List.generate(labels.length, (index) {
-          return _skuCell(
-            widths[index],
-            labels[index],
-            isHeader: true,
-            align: TextAlign.center,
-            height: 70,
-          );
-        }),
-      ),
-    );
-  }
-
-  // ignore: unused_element
-  Widget _skuTableRow(
-      {required int index,
-      required Product product,
-      required double tableWidth}) {
-    final widths = _columnWidths(tableWidth);
-    final ordered = alreadyOrderedQty(product);
-    final currentTarget = toInt(minStockControllerFor(product).text);
-    final nextTarget = currentTarget * 2;
-    final total = totalAmountFor(product);
-
+  Widget _row(int index, _PrimarySkuDraftRow row, List<double> widths) {
     return Row(
       children: [
-        _skuCell(widths[0], index.toString(), align: TextAlign.center),
-        _textInputCell(widths[1], nameControllerFor(product),
-            hint: 'SKU / product name'),
-        _textInputCell(widths[2], brandControllerFor(product), hint: 'Brand'),
-        _textInputCell(widths[3], skuCodeControllerFor(product), hint: 'Code'),
-        _inputCell(widths[4], cartonControllerFor(product)),
-        _inputCell(widths[5], unitControllerFor(product)),
-        _skuCell(widths[6], product.warehouseStock.toString(),
-            align: TextAlign.center),
-        _skuCell(widths[7], ordered.toString(), align: TextAlign.center),
-        _skuCell(widths[8], currentTarget.toString(), align: TextAlign.center),
-        _skuCell(widths[9], nextTarget.toString(), align: TextAlign.center),
-        _textInputCell(widths[10], minStockControllerFor(product),
-            hint: '0', number: true, align: TextAlign.center),
-        _textInputCell(widths[11], packetBuyControllerFor(product),
-            hint: '0', number: true, align: TextAlign.right),
-        _textInputCell(widths[12], packetSellControllerFor(product),
-            hint: '0', number: true, align: TextAlign.right),
-        _skuCell(widths[13], state.rs(total), align: TextAlign.right),
+        _cell(widths[0], '${index + 1}', center: true),
+        _productSearch(widths[1], row),
+        _input(widths[2], row.brandController, hint: 'Brand'),
+        _input(widths[3], row.skuCodeController, hint: 'Code'),
+        _input(widths[4], row.cartonsController, number: true, center: true),
+        _input(widths[5], row.packController, number: true, center: true),
+        _cell(widths[6], totalBoxesFor(row).toString(), center: true),
+        _input(widths[7], row.minStockController, number: true, center: true),
+        _input(widths[8], row.packetBuyController, number: true, right: true),
+        _input(widths[9], row.packetSellController, number: true, right: true),
+        _input(widths[10], row.companyDiscountController,
+            number: true, center: true),
+        _input(widths[11], row.tradeOfferController,
+            number: true, center: true),
+        _cell(widths[12], state.rs(grossFor(row)), right: true),
+        _cell(widths[13], state.rs(discountFor(row)), right: true),
+        _cell(widths[14], state.rs(netFor(row)), right: true),
+        Container(
+          width: widths[15],
+          height: 46,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xffe5e7eb), width: .7),
+          ),
+          child: IconButton(
+            tooltip: 'Remove row',
+            onPressed: draftSkuRows.length == 1
+                ? null
+                : () {
+                    setState(() {
+                      orderGenerated = false;
+                      final removed = draftSkuRows.removeAt(index);
+                      removed.dispose();
+                    });
+                  },
+            icon: const Icon(Icons.delete_outline_rounded, size: 19),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _draftSkuTableRow(
-      {required int index,
-      required _PrimarySkuDraftRow row,
-      required double tableWidth}) {
-    final widths = _columnWidths(tableWidth);
-    final matchedProduct = productForDraft(row);
-    final ordered =
-        matchedProduct == null ? 0 : alreadyOrderedQty(matchedProduct);
-    final available = matchedProduct?.warehouseStock ?? 0;
-    final minStock = toInt(row.minStockController.text);
-    final total = totalAmountForDraft(row);
-
-    return Row(
-      children: [
-        _skuCell(widths[0], index.toString(), align: TextAlign.center),
-        _skuSearchCell(widths[1], row),
-        _textInputCell(widths[2], row.brandController, hint: 'Brand'),
-        _textInputCell(widths[3], row.skuCodeController, hint: 'Code'),
-        _inputCell(widths[4], row.cartonsController),
-        _inputCell(widths[5], row.unitsController),
-        _skuCell(widths[6], available.toString(), align: TextAlign.center),
-        _skuCell(widths[7], ordered.toString(), align: TextAlign.center),
-        _skuCell(widths[8], minStock.toString(), align: TextAlign.center),
-        _skuCell(widths[9], (minStock * 2).toString(), align: TextAlign.center),
-        _textInputCell(widths[10], row.minStockController,
-            hint: '0', number: true, align: TextAlign.center),
-        _textInputCell(widths[11], row.packetBuyController,
-            hint: '0', number: true, align: TextAlign.right),
-        _textInputCell(widths[12], row.packetSellController,
-            hint: '0', number: true, align: TextAlign.right),
-        _textInputCell(widths[13], row.companyDiscountController,
-            hint: '0%', number: true, align: TextAlign.center),
-        _textInputCell(widths[14], row.tradeOfferController,
-            hint: '0%', number: true, align: TextAlign.center),
-        _skuCell(widths[15], state.rs(total), align: TextAlign.right),
-      ],
-    );
-  }
-
-  Widget _skuSearchCell(double width, _PrimarySkuDraftRow row) {
+  Widget _productSearch(double width, _PrimarySkuDraftRow row) {
     return Container(
       width: width,
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      height: 46,
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xffe5e7eb), width: 0.65)),
+        color: Colors.white,
+        border: Border.all(color: const Color(0xffe5e7eb), width: .7),
+      ),
       child: Autocomplete<Product>(
         displayStringForOption: (product) => product.name,
-        optionsBuilder: (TextEditingValue value) {
+        optionsBuilder: (value) {
           final query = value.text.trim().toLowerCase();
           if (query.isEmpty) return const Iterable<Product>.empty();
-          return state.products.where((product) {
-            return product.name.toLowerCase().contains(query) ||
-                product.sku.toLowerCase().contains(query) ||
-                product.brand.toLowerCase().contains(query);
-          }).take(8);
+          return state.products.where((product) =>
+              product.name.toLowerCase().contains(query) ||
+              product.sku.toLowerCase().contains(query) ||
+              product.brand.toLowerCase().contains(query));
         },
-        onSelected: (product) {
-          setState(() {
-            row.selectedProductId = product.id;
-            row.skuController.text = product.name;
-            row.brandController.text = product.brand;
-            row.skuCodeController.text = product.sku;
-            row.packController.text = product.packetsPerCarton <= 0
-                ? '1'
-                : product.packetsPerCarton.toString();
-            row.packetBuyController.text = product.purchasePrice
-                .toStringAsFixed(product.purchasePrice ==
-                        product.purchasePrice.roundToDouble()
-                    ? 0
-                    : 2);
-            row.packetSellController.text = product.sellingPrice
-                .toStringAsFixed(
-                    product.sellingPrice == product.sellingPrice.roundToDouble()
-                        ? 0
-                        : 2);
-            row.companyDiscountController.text =
-                product.companyDiscount.toStringAsFixed(
-              product.companyDiscount == product.companyDiscount.roundToDouble()
-                  ? 0
-                  : 2,
-            );
-            row.tradeOfferController.text = product.tradeDiscount
-                .toStringAsFixed(product.tradeDiscount ==
-                        product.tradeDiscount.roundToDouble()
-                    ? 0
-                    : 2);
-            row.minStockController.text = product.lowStockLimit.toString();
-            row.companyDiscountController.text = product.companyDiscount
-                .toStringAsFixed(product.companyDiscount ==
-                        product.companyDiscount.roundToDouble()
-                    ? 0
-                    : 2);
-            row.tradeOfferController.text = product.tradeDiscount
-                .toStringAsFixed(product.tradeDiscount ==
-                        product.tradeDiscount.roundToDouble()
-                    ? 0
-                    : 2);
-          });
-        },
-        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-          if (controller.text != row.skuController.text) {
-            controller.value = row.skuController.value;
+        onSelected: (product) => _selectProduct(row, product),
+        fieldViewBuilder: (context, controller, focusNode, _) {
+          if (controller.text != row.nameController.text) {
+            controller.value = row.nameController.value;
           }
-          controller.addListener(() {
-            if (row.skuController.text != controller.text) {
-              row.skuController.text = controller.text;
-              row.selectedProductId = '';
-            }
-          });
           return TextField(
             controller: controller,
             focusNode: focusNode,
             style: const TextStyle(fontSize: 12),
-            decoration: InputDecoration(
-              hintText: 'Search or type SKU',
+            decoration: const InputDecoration(
+              hintText: 'Search or type product',
               isDense: true,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+              contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 9),
             ),
-            onChanged: (_) => setState(() {}),
-          );
-        },
-        optionsViewBuilder: (context, onSelected, options) {
-          return Align(
-            alignment: Alignment.topLeft,
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(10),
-              child: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxHeight: 260, maxWidth: 360),
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: options.length,
-                  itemBuilder: (context, index) {
-                    final product = options.elementAt(index);
-                    return ListTile(
-                      dense: true,
-                      title: Text(product.name,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(
-                          '${product.brand} • ${product.sku} • Stock ${product.warehouseStock}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      onTap: () => onSelected(product),
-                    );
-                  },
-                ),
-              ),
-            ),
+            onChanged: (value) {
+              row.nameController.text = value;
+              row.selectedProductId = '';
+              setState(() => orderGenerated = false);
+            },
           );
         },
       ),
     );
   }
 
-  Widget _addNewRow(double tableWidth) {
-    return InkWell(
-      onTap: addFreshSkuRow,
-      child: Container(
-        height: 34,
-        decoration: const BoxDecoration(
-          color: Color(0xfff8fafc),
-          border: Border(
-            left: BorderSide(color: Color(0xffe5e7eb)),
-            right: BorderSide(color: Color(0xffe5e7eb)),
-            bottom: BorderSide(color: Color(0xffe5e7eb)),
-          ),
-        ),
-        child: const Row(
-          children: [
-            SizedBox(width: 10),
-            Icon(Icons.add_box_rounded, size: 16, color: Color(0xff64748b)),
-            SizedBox(width: 6),
-            Text('Add New Row',
-                style: TextStyle(
-                    color: Color(0xff334155), fontWeight: FontWeight.w800)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _totalRow(double tableWidth) {
-    final widths = _columnWidths(tableWidth);
-    return Row(
-      children: [
-        _skuCell(widths[0] + widths[1] + widths[2] + widths[3], 'Total',
-            align: TextAlign.right, isTotal: true),
-        _skuCell(widths[4], totalCartons.toString(),
-            align: TextAlign.center, isTotal: true),
-        _skuCell(widths[5], totalUnits.toString(),
-            align: TextAlign.center, isTotal: true),
-        _skuCell(
-            widths.sublist(6, 15).fold<double>(0, (sum, item) => sum + item),
-            '',
-            isTotal: true),
-        _skuCell(widths[15], state.rs(totalAmount),
-            align: TextAlign.right, isTotal: true),
-      ],
-    );
-  }
-
-  Widget _skuCell(
-    double width,
-    String text, {
-    bool isHeader = false,
-    bool isTotal = false,
-    TextAlign align = TextAlign.left,
-    double height = 44,
-  }) {
-    final bg = isHeader
-        ? const Color(0xfff8fafc)
-        : isTotal
-            ? const Color(0xfff8fafc)
-            : Colors.white;
-    final textColor = isHeader ? AppTheme.primary : AppTheme.dark;
-
-    return Container(
-      width: width,
-      height: height,
-      padding: EdgeInsets.symmetric(
-          horizontal: isHeader ? 8 : 6, vertical: isHeader ? 10 : 6),
-      alignment: _alignmentFor(align),
-      decoration: BoxDecoration(
-        color: bg,
-        border: Border.all(
-            color: isHeader ? const Color(0xffdbeafe) : const Color(0xffe5e7eb),
-            width: 0.65),
-      ),
-      child: Text(
-        text,
-        maxLines: isHeader ? 3 : 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: align,
-        style: TextStyle(
-          color: textColor,
-          fontSize: isHeader ? 10.5 : 12,
-          fontWeight: isHeader || isTotal ? FontWeight.w800 : FontWeight.w500,
-          height: isHeader ? 1.25 : 1.15,
-        ),
-      ),
-    );
-  }
-
-  Widget _inputCell(double width, TextEditingController controller) {
-    return _textInputCell(width, controller,
-        hint: '0', number: true, align: TextAlign.center);
-  }
-
-  Widget _textInputCell(
+  Widget _input(
     double width,
     TextEditingController controller, {
-    String hint = '',
+    String hint = '0',
     bool number = false,
-    TextAlign align = TextAlign.left,
+    bool center = false,
+    bool right = false,
   }) {
     return Container(
       width: width,
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      height: 46,
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xffe5e7eb), width: 0.65)),
+        color: Colors.white,
+        border: Border.all(color: const Color(0xffe5e7eb), width: .7),
+      ),
       child: TextField(
         controller: controller,
-        keyboardType: number ? TextInputType.number : TextInputType.text,
-        textAlign: align,
+        keyboardType: number
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : TextInputType.text,
+        textAlign: right
+            ? TextAlign.right
+            : center
+                ? TextAlign.center
+                : TextAlign.left,
         style: const TextStyle(fontSize: 12),
         decoration: InputDecoration(
           hintText: hint,
           isDense: true,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+              const EdgeInsets.symmetric(horizontal: 7, vertical: 9),
         ),
-        onChanged: (_) => setState(() {}),
+        onChanged: (_) => setState(() => orderGenerated = false),
       ),
     );
   }
 
-  Alignment _alignmentFor(TextAlign align) {
-    switch (align) {
-      case TextAlign.center:
-        return Alignment.center;
-      case TextAlign.right:
-      case TextAlign.end:
-        return Alignment.centerRight;
-      default:
-        return Alignment.centerLeft;
-    }
-  }
-
-  Widget _orderFooter({required bool isCompact}) {
-    final now = DateTime.now();
-    final dateText =
-        '${_monthName(now.month)} ${now.day}, ${now.year} at ${_formatTime(now)}';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Divider(thickness: 3, color: Color(0xffcbd5e1)),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 22,
-          runSpacing: 16,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.spaceBetween,
-          children: [
-            SizedBox(
-              width: isCompact ? double.infinity : 430,
-              child: TextField(
-                controller: remarksController,
-                minLines: 2,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Remarks',
-                  alignLabelWithHint: true,
-                ),
-              ),
-            ),
-            OutlinedButton.icon(
-              onPressed: attachDepositSlip,
-              icon: const Icon(Icons.attach_file_rounded),
-              label: const Text('Attach Deposit Slip'),
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 17),
-                side: const BorderSide(color: Colors.transparent),
-              ),
-            ),
-            SizedBox(
-              width: isCompact ? double.infinity : 250,
-              height: 54,
-              child: ElevatedButton.icon(
-                onPressed: generateOrder,
-                icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                label: const Text('Generate Order'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(3)),
-                ),
-              ),
-            ),
-          ],
+  Widget _cell(
+    double width,
+    String text, {
+    bool header = false,
+    bool center = false,
+    bool right = false,
+    double height = 46,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      alignment: right
+          ? Alignment.centerRight
+          : center
+              ? Alignment.center
+              : Alignment.centerLeft,
+      decoration: BoxDecoration(
+        color: header ? const Color(0xfff8fafc) : Colors.white,
+        border: Border.all(
+          color: header ? const Color(0xffdbeafe) : const Color(0xffe5e7eb),
+          width: .7,
         ),
-        const SizedBox(height: 22),
-        Wrap(
-          spacing: 70,
-          runSpacing: 8,
-          children: [
-            _auditText('Order Added On :', dateText),
-            _auditText(
-                'Order Added By :', state.profile?.fullName ?? 'afratraders'),
-          ],
+      ),
+      child: Text(
+        text,
+        maxLines: header ? 2 : 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: center
+            ? TextAlign.center
+            : right
+                ? TextAlign.right
+                : TextAlign.left,
+        style: TextStyle(
+          fontSize: header ? 11 : 12,
+          fontWeight: header ? FontWeight.w800 : FontWeight.w600,
+          color: header ? AppTheme.primary : AppTheme.dark,
         ),
-      ],
+      ),
     );
-  }
-
-  Widget _auditText(String label, String value) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-            width: 150,
-            child: Text(label,
-                style: const TextStyle(
-                    color: Color(0xff6b7280), fontWeight: FontWeight.w600))),
-        Text(value,
-            style: const TextStyle(
-                color: AppTheme.dark, fontWeight: FontWeight.w700)),
-      ],
-    );
-  }
-
-  String _monthName(int month) {
-    const names = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'June',
-      'July',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return names[(month - 1).clamp(0, 11)];
-  }
-
-  String _formatTime(DateTime date) {
-    final hour =
-        date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
-    final minute = date.minute.toString().padLeft(2, '0');
-    final period = date.hour >= 12 ? 'pm' : 'am';
-    return '$hour:$minute $period';
   }
 }
 
 class _PrimarySkuDraftRow {
   String selectedProductId = '';
-  final skuController = TextEditingController();
+  final nameController = TextEditingController();
   final brandController = TextEditingController();
   final skuCodeController = TextEditingController();
   final cartonsController = TextEditingController(text: '0');
-  final unitsController = TextEditingController(text: '0');
-  final returnCartonsController = TextEditingController(text: '0');
-  final returnUnitsController = TextEditingController(text: '0');
   final packController = TextEditingController(text: '24');
+  final minStockController = TextEditingController(text: '0');
   final packetBuyController = TextEditingController(text: '0');
   final packetSellController = TextEditingController(text: '0');
   final companyDiscountController = TextEditingController(text: '0');
   final tradeOfferController = TextEditingController(text: '0');
-  final minStockController = TextEditingController(text: '0');
 
   void dispose() {
-    skuController.dispose();
+    nameController.dispose();
     brandController.dispose();
     skuCodeController.dispose();
     cartonsController.dispose();
-    unitsController.dispose();
-    returnCartonsController.dispose();
-    returnUnitsController.dispose();
     packController.dispose();
+    minStockController.dispose();
     packetBuyController.dispose();
     packetSellController.dispose();
     companyDiscountController.dispose();
     tradeOfferController.dispose();
-    minStockController.dispose();
   }
 }
 
@@ -3247,7 +2996,8 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
       TextEditingController(text: DateTime.now().month.toString());
   final yearController =
       TextEditingController(text: DateTime.now().year.toString());
-      
+  String distributorFilter = '';
+  String manufacturerFilter = '';
 
   AppState get state => widget.state;
 
@@ -3281,8 +3031,18 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
   }
 
   List<CompanyPurchase> get purchases {
-    final rows =
-        state.companyPurchases.where((item) => monthOk(item.date)).toList();
+    final rows = state.companyPurchases.where((item) {
+      if (!monthOk(item.date)) return false;
+      if (distributorFilter.isNotEmpty &&
+          item.distributorName != distributorFilter) {
+        return false;
+      }
+      if (manufacturerFilter.isNotEmpty &&
+          item.manufacturerName != manufacturerFilter) {
+        return false;
+      }
+      return true;
+    }).toList();
     rows.sort((a, b) {
       final dateCompare = a.date.compareTo(b.date);
       if (dateCompare != 0) return dateCompare;
@@ -3291,18 +3051,73 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
     return rows;
   }
 
+  List<DepositEntry> get ledgerDeposits {
+    final rows = state.deposits.where((item) {
+      if (!monthOk(item.date)) return false;
+      if (distributorFilter.isNotEmpty &&
+          item.distributorName.isNotEmpty &&
+          item.distributorName != distributorFilter) {
+        return false;
+      }
+      if (manufacturerFilter.isNotEmpty && item.party != manufacturerFilter) {
+        return false;
+      }
+      return true;
+    }).toList();
+    rows.sort((a, b) => a.date.compareTo(b.date));
+    return rows;
+  }
+
   double get openingBalance {
-    return state.companyPurchases
-        .where((item) => beforeSelectedMonth(item.date))
-        .fold<double>(0, (sum, item) => sum + item.remainingAmount);
+    final priorDebits = state.companyPurchases.where((item) {
+      if (!beforeSelectedMonth(item.date)) return false;
+      if (distributorFilter.isNotEmpty &&
+          item.distributorName != distributorFilter) {
+        return false;
+      }
+      if (manufacturerFilter.isNotEmpty &&
+          item.manufacturerName != manufacturerFilter) {
+        return false;
+      }
+      return true;
+    }).fold<double>(0, (sum, item) => sum + item.totalBill);
+
+    final priorCredits = state.deposits.where((item) {
+      if (!beforeSelectedMonth(item.date)) return false;
+      if (distributorFilter.isNotEmpty &&
+          item.distributorName.isNotEmpty &&
+          item.distributorName != distributorFilter) {
+        return false;
+      }
+      if (manufacturerFilter.isNotEmpty && item.party != manufacturerFilter) {
+        return false;
+      }
+      return true;
+    }).fold<double>(0, (sum, item) => sum + item.total);
+
+    return priorDebits - priorCredits;
   }
 
   double get invoiceDebitTotal =>
       purchases.fold<double>(0, (sum, item) => sum + item.totalBill);
   double get paymentCreditTotal =>
-      purchases.fold<double>(0, (sum, item) => sum + item.paidAmount);
+      ledgerDeposits.fold<double>(0, (sum, item) => sum + item.total);
   double get closingBalance =>
       openingBalance + invoiceDebitTotal - paymentCreditTotal;
+
+  List<String> get ledgerDistributors => state.companyPurchases
+      .map((item) => item.distributorName)
+      .where((item) => item.trim().isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<String> get ledgerManufacturers => state.companyPurchases
+      .map((item) => item.manufacturerName)
+      .where((item) => item.trim().isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
 
   Widget filterInput(String label, TextEditingController controller,
       {double width = 120}) {
@@ -3338,10 +3153,30 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
               ),
               filterInput('Month', monthController, width: 110),
               filterInput('Year', yearController, width: 120),
+              filterDropdown(
+                label: 'Distributor',
+                value: distributorFilter,
+                items: ledgerDistributors
+                    .map((item) => FilterOption(item, item))
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => distributorFilter = value),
+              ),
+              filterDropdown(
+                label: 'Manufacturer / Party',
+                value: manufacturerFilter,
+                items: ledgerManufacturers
+                    .map((item) => FilterOption(item, item))
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => manufacturerFilter = value),
+              ),
               clearFilterButton(() {
                 setState(() {
                   monthController.clear();
                   yearController.clear();
+                  distributorFilter = '';
+                  manufacturerFilter = '';
                 });
               }),
               OutlinedButton.icon(
@@ -3459,22 +3294,22 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
         credit: 0,
         balance: balance,
       ));
+    }
 
-      if (item.paidAmount > 0) {
-        balance -= item.paidAmount;
-        ledgerRows.add(_CompanyLedgerRow(
-          bok: 'CR',
-          voucherNo: item.invoiceNo.isEmpty ? '-' : item.invoiceNo,
-          date: formatDateForUi(item.date),
-          slipNo: item.note.isEmpty ? '-' : item.note,
-          bank: item.note.toLowerCase().contains('cash') ? 'CASH' : '-',
-          qty: '-',
-          description: 'Payment to ${item.companyName.isEmpty ? 'Company' : item.companyName}',
-          debit: 0,
-          credit: item.paidAmount,
-          balance: balance,
-        ));
-      }
+    for (final deposit in ledgerDeposits) {
+      balance -= deposit.total;
+      ledgerRows.add(_CompanyLedgerRow(
+        bok: 'CR',
+        voucherNo: deposit.referenceNo.isEmpty ? '-' : deposit.referenceNo,
+        date: formatDateForUi(deposit.date),
+        slipNo: deposit.referenceNo.isEmpty ? '-' : deposit.referenceNo,
+        bank: deposit.distributorName.isEmpty ? '-' : deposit.distributorName,
+        qty: '-',
+        description: 'Payment to ${deposit.party.isEmpty ? 'Company' : deposit.party}',
+        debit: 0,
+        credit: deposit.total,
+        balance: balance,
+      ));
     }
 
     final rowsHtml = StringBuffer();
@@ -3556,22 +3391,22 @@ class _CompanyLedgerPageState extends State<CompanyLedgerPage> {
         credit: 0,
         balance: balance,
       ));
+    }
 
-      if (item.paidAmount > 0) {
-        balance -= item.paidAmount;
-        ledgerRows.add(_CompanyLedgerRow(
-          bok: 'CR',
-          voucherNo: item.invoiceNo.isEmpty ? '-' : item.invoiceNo,
-          date: formatDateForUi(item.date),
-          slipNo: item.note.isEmpty ? '-' : item.note,
-          bank: item.note.toLowerCase().contains('cash') ? 'CASH' : '-',
-          qty: '-',
-          description: 'Payment to ${item.companyName.isEmpty ? 'Company' : item.companyName}',
-          debit: 0,
-          credit: item.paidAmount,
-          balance: balance,
-        ));
-      }
+    for (final deposit in ledgerDeposits) {
+      balance -= deposit.total;
+      ledgerRows.add(_CompanyLedgerRow(
+        bok: 'CR',
+        voucherNo: deposit.referenceNo.isEmpty ? '-' : deposit.referenceNo,
+        date: formatDateForUi(deposit.date),
+        slipNo: deposit.referenceNo.isEmpty ? '-' : deposit.referenceNo,
+        bank: deposit.distributorName.isEmpty ? '-' : deposit.distributorName,
+        qty: '-',
+        description: 'Payment to ${deposit.party.isEmpty ? 'Company' : deposit.party}',
+        debit: 0,
+        credit: deposit.total,
+        balance: balance,
+      ));
     }
 
     return Container(
@@ -3836,17 +3671,13 @@ class _LoadFormPageState extends State<LoadFormPage> {
   }
 
   double _discountAmountFor(_SecondarySkuDraftRow row) {
-    final baseAmount = (_loadTotalFor(row) - _returnTotalFor(row))
-        .clamp(0, double.infinity)
-        .toDouble();
-    return baseAmount * (_percentageFor(row) / 100);
+    return _loadTotalFor(row) * (_percentageFor(row) / 100);
   }
 
   double _netTotalFor(_SecondarySkuDraftRow row) {
-    final baseAmount = (_loadTotalFor(row) - _returnTotalFor(row))
-        .clamp(0, double.infinity)
-        .toDouble();
-    return (baseAmount - _discountAmountFor(row))
+    return (_loadTotalFor(row) -
+            _returnTotalFor(row) -
+            _discountAmountFor(row))
         .clamp(0, double.infinity)
         .toDouble();
   }
@@ -3911,41 +3742,79 @@ class _LoadFormPageState extends State<LoadFormPage> {
       return;
     }
 
+    for (final row in validRows) {
+      final product = productForRow(row)!;
+      final loadBoxes = _loadUnitsFor(row);
+      final returnBoxes = _returnUnitsFor(row);
+      final price = toDouble(row.packetSellController.text);
+      final companyPercent =
+          toDouble(row.companyPercentController.text).clamp(0, 100).toDouble();
+      final tradePercent =
+          toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
+
+      if (loadBoxes <= 0 && returnBoxes <= 0) {
+        showSnack(context, 'Enter a valid load or return quantity.');
+        return;
+      }
+      if (loadBoxes > product.warehouseStock) {
+        showSnack(context,
+            'Not enough distributor stock for ${product.name}. Available: ${product.warehouseStock} boxes.');
+        return;
+      }
+      if (price <= 0) {
+        showSnack(context, 'Selling price must be greater than 0.');
+        return;
+      }
+      if (companyPercent + tradePercent > 100) {
+        showSnack(context,
+            'Company discount and trade offer cannot exceed 100%.');
+        return;
+      }
+    }
+
+    var saved = false;
     await runAction(
       context,
       () async {
-        for (final row in validRows) {
+        final items = validRows.map((row) {
           final product = productForRow(row)!;
-          final loadQty = _loadUnitsFor(row);
-          final returnQty = _returnUnitsFor(row);
+          return <String, dynamic>{
+            'product_id': product.id,
+            'packets_per_carton': _packFor(row),
+            'load_cartons': toInt(row.cartonsController.text),
+            'load_loose_boxes': toInt(row.unitsController.text),
+            'return_cartons': toInt(row.returnCartonsController.text),
+            'return_loose_boxes': toInt(row.returnUnitsController.text),
+            'selling_price': toDouble(row.packetSellController.text),
+            'company_discount_percent': toDouble(
+                    row.companyPercentController.text)
+                .clamp(0, 100)
+                .toDouble(),
+            'trade_offer_percent':
+                toDouble(row.tradeOfferController.text)
+                    .clamp(0, 100)
+                    .toDouble(),
+          };
+        }).toList();
 
-          if (loadQty > 0) {
-            await state.service.loadStock(
-              companyId: state.companyId,
-              dsrId: selectedDsrId,
-              supplierId: selectedSalesmanId,
-              productId: product.id,
-              quantity: loadQty,
-            );
-          }
-
-          if (returnQty > 0) {
-            await state.service.returnStock(
-              companyId: state.companyId,
-              dsrId: selectedDsrId,
-              productId: product.id,
-              quantity: returnQty,
-              note: 'Secondary Order return • ${remarksController.text.trim()}',
-            );
-          }
-        }
+        await state.service.createSecondaryOrder(
+          companyId: state.companyId,
+          dsrId: selectedDsrId,
+          supplierId: selectedSalesmanId,
+          extraAmount: toDouble(extraAmountController.text),
+          physicalCash: toDouble(physicalCashController.text),
+          note: remarksController.text.trim(),
+          items: items,
+        );
+        saved = true;
       },
       widget.onChanged,
     );
 
+    if (!saved || !mounted) return;
+
     final bookerName = state.dsrName(selectedDsrId);
     final salesmanName = state.supplierName(selectedSalesmanId);
-
     for (final row in orderRows) {
       row.dispose();
     }
@@ -3953,12 +3822,10 @@ class _LoadFormPageState extends State<LoadFormPage> {
       ..clear()
       ..add(_SecondarySkuDraftRow());
     remarksController.clear();
-
-    if (mounted) {
-      setState(() {});
-      showSnack(
-          context, 'Load settlement saved for $bookerName / $salesmanName.');
-    }
+    extraAmountController.text = '0';
+    physicalCashController.text = '0';
+    setState(() {});
+    showSnack(context, 'Load settlement saved for $bookerName / $salesmanName.');
   }
 
   void openDsrReport() {
@@ -4674,7 +4541,7 @@ class _LoadFormPageState extends State<LoadFormPage> {
               color: Colors.purple),
           StatCard(
               title: 'Net Load',
-              value: state.rs(netLoadAmount),
+              value: state.rs(expectedCash),
               icon: Icons.calculate_rounded,
               color: Colors.indigo),
           StatCard(
@@ -4688,37 +4555,79 @@ class _LoadFormPageState extends State<LoadFormPage> {
   }
 
   Widget _historyCard() {
+    final seenSettlements = <String>{};
     return DataCard(
       title: 'Secondary Order History',
       child: state.loads.isEmpty
           ? emptyBox('No secondary orders found.')
           : horizontalTable(
               DataTable(
-                columnSpacing: 20,
-                horizontalMargin: 8,
+                columnSpacing: 6,
+                horizontalMargin: 6,
+                headingRowHeight: 42,
+                dataRowMinHeight: 46,
+                dataRowMaxHeight: 54,
                 columns: const [
                   DataColumn(label: Text('Date')),
                   DataColumn(label: Text('Booker')),
                   DataColumn(label: Text('Salesman')),
                   DataColumn(label: Text('Product')),
-                  DataColumn(label: Text('Qty')),
+                  DataColumn(label: Text('Load Boxes')),
+                  DataColumn(label: Text('Return Boxes')),
+                  DataColumn(label: Text('Gross')),
+                  DataColumn(label: Text('Discount')),
+                  DataColumn(label: Text('Extra')),
+                  DataColumn(label: Text('Net')),
+                  DataColumn(label: Text('Physical Cash')),
+                  DataColumn(label: Text('Status')),
                 ],
                 rows: state.loads.map((x) {
+                  final settlementKey =
+                      x.settlementId.isEmpty ? x.id : x.settlementId;
+                  final extra = seenSettlements.add(settlementKey)
+                      ? x.extraAmount
+                      : 0.0;
                   return DataRow(cells: [
-                    DataCell(Text(formatDateForUi(x.date))),
                     DataCell(SizedBox(
-                        width: 140,
+                        width: 72,
+                        child: Text(formatDateForUi(x.date),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12)))),
+                    DataCell(SizedBox(
+                        width: 90,
                         child: Text(state.dsrName(x.dsrId),
-                            overflow: TextOverflow.ellipsis))),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12)))),
                     DataCell(SizedBox(
-                        width: 140,
+                        width: 90,
                         child: Text(state.supplierName(x.supplierId),
-                            overflow: TextOverflow.ellipsis))),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12)))),
                     DataCell(SizedBox(
-                        width: 180,
+                        width: 108,
                         child: Text(state.productName(x.productId),
-                            overflow: TextOverflow.ellipsis))),
-                    DataCell(Text(x.quantity.toString())),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12)))),
+                    DataCell(Text(x.quantity.toString(),
+                        style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(x.returnQuantity.toString(),
+                        style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(state.rs(effectiveLoadGross(state, x)),
+                        style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(state.rs(effectiveLoadDiscount(state, x)),
+                        style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(state.rs(extra),
+                        style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(state.rs(effectiveLoadNet(state, x) + extra),
+                        style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(state.rs(x.physicalCash),
+                        style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(x.isGenerated ? 'Generated' : 'Pending',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: x.isGenerated ? Colors.green : Colors.orange,
+                          fontWeight: FontWeight.w700,
+                        ))),
                   ]);
                 }).toList(),
               ),
@@ -4885,12 +4794,20 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
   }
 
   List<_LoadFormProductLine> get productLines {
+    final seenSettlements = <String>{};
     final lines = filteredLoads.map((load) {
+      final settlementKey =
+          load.settlementId.isEmpty ? load.id : load.settlementId;
+      final includeSettlementExtra = seenSettlements.add(settlementKey);
       return _LoadFormProductLine(
         loadId: load.id,
         productId: load.productId,
         product: state.productById(load.productId),
         quantity: load.quantity,
+        packValue: load.packetsPerCarton,
+        rateValue: load.sellingPrice,
+        amountValue: effectiveLoadNet(state, load) +
+            (includeSettlementExtra ? load.extraAmount : 0),
         date: load.date,
         dsrId: load.dsrId,
         salesmanId: load.supplierId,
@@ -4942,8 +4859,33 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
     return recoveryBills.fold(0.0, (sum, item) => sum + item.receivedAmount);
   }
 
+  List<ExpenseEntry> get selectedExpenses {
+    if (selectedDsrId.isEmpty) return [];
+    return state.expensesFor(selectedDsrId, dateController.text.trim());
+  }
+
+  double get cashInflows => selectedExpenses
+      .where((item) => AppState.cashInExpenseTypes.contains(item.type))
+      .fold(0.0, (sum, item) => sum + item.amount);
+
+  double get expenseOutflows => selectedExpenses
+      .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
+      .fold(0.0, (sum, item) => sum + item.amount);
+
   double get netCashSale => grossSale - creditSale;
-  double get totalDsrCash => netCashSale + recoveryAmount;
+  double get totalDsrCash =>
+      netCashSale + recoveryAmount + cashInflows - expenseOutflows;
+
+  double get physicalCash {
+    final seen = <String>{};
+    for (final load in filteredLoads) {
+      final key = load.settlementId.isEmpty ? load.id : load.settlementId;
+      if (seen.add(key) && load.physicalCash > 0) return load.physicalCash;
+    }
+    return 0;
+  }
+
+  double get cashDifference => physicalCash - totalDsrCash;
 
   List<_LoadFormSearchSuggestion> get searchSuggestions {
     return _suggestionsForQuery(searchController.text);
@@ -5059,50 +5001,247 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
     return names;
   }
 
+  List<LoadEntry> get selectedLoadFormRows {
+    final date = dateController.text.trim();
+    if (selectedDsrId.isEmpty || date.isEmpty) return const <LoadEntry>[];
+
+    return state.loads.where((load) {
+      return load.dsrId == selectedDsrId && load.date.trim() == date;
+    }).toList();
+  }
+
+  List<LoadEntry> get pendingLoadFormRows =>
+      selectedLoadFormRows.where((load) => !load.isGenerated).toList();
+
+  bool get hasGeneratedLoadForm =>
+      selectedLoadFormRows.isNotEmpty && pendingLoadFormRows.isEmpty;
+
+  Future<bool> generateLoadForm({required double physicalCashAmount}) async {
+    final date = dateController.text.trim();
+    if (selectedDsrId.isEmpty) {
+      showSnack(context, 'Select DSR first.', type: AppToastType.error);
+      return false;
+    }
+    if (date.isEmpty) {
+      showSnack(context, 'Select load form date first.',
+          type: AppToastType.error);
+      return false;
+    }
+    if (selectedLoadFormRows.isEmpty) {
+      showSnack(
+        context,
+        'No Secondary Order load found for the selected DSR and date.',
+        type: AppToastType.error,
+      );
+      return false;
+    }
+    if (hasGeneratedLoadForm) {
+      showSnack(
+        context,
+        'This load form has already been generated.',
+        type: AppToastType.info,
+      );
+      return true;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Generate Load Form Settlement?'),
+          content: const Text(
+            'This will generate the settlement, save the counted physical cash, calculate Short/Excess, convert the pending Secondary Order load into Cash Sales, deduct stock, and update the connected reports and Dashboard. The same load cannot be generated twice.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              icon: const Icon(Icons.playlist_add_check_rounded),
+              label: const Text('Generate'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return false;
+
+    try {
+      final result = await state.service.generateLoadFormSales(
+        companyId: state.companyId,
+        dsrId: selectedDsrId,
+        date: date,
+        physicalCash: physicalCashAmount,
+      );
+      await widget.onChanged();
+      if (!mounted) return false;
+
+      final salesCount = asInt(result['sales_count']);
+      final totalAmount = asDouble(result['total_amount']);
+      showSnack(
+        context,
+        'Load form settlement generated: $salesCount sale row(s), ${state.rs(totalAmount)} added to Gross Sale.',
+        type: AppToastType.success,
+      );
+      return true;
+    } catch (error) {
+      if (!mounted) return false;
+      showSnack(
+        context,
+        friendlyErrorMessage(error),
+        type: AppToastType.error,
+      );
+      return false;
+    }
+  }
+
   void openPrintPreview() {
+    final printableKey = GlobalKey<_LoadFormSettlementPrintableState>();
+    var previewGenerating = false;
+    var previewGenerated = hasGeneratedLoadForm;
+
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return Dialog.fullscreen(
-          child: Scaffold(
-            backgroundColor: const Color(0xfff3f4f6),
-            appBar: AppBar(
-              title: const Text('Load Form Settlement Print Preview'),
-              actions: [
-                ElevatedButton.icon(
-                  onPressed: printCurrentPage,
-                  icon: const Icon(Icons.print_rounded, size: 18),
-                  label: const Text('Print'),
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            Future<void> generateFromPreview() async {
+              if (previewGenerating || previewGenerated) return;
+              setDialogState(() => previewGenerating = true);
+              final physicalCashAmount =
+                  printableKey.currentState?.cashNoteTotal ?? physicalCash;
+              final success = await generateLoadForm(
+                physicalCashAmount: physicalCashAmount,
+              );
+              if (!dialogContext.mounted) return;
+
+              if (success) {
+                Navigator.pop(dialogContext);
+                if (!mounted) return;
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DashboardMetricPage(
+                      state: state,
+                      metric: DashboardMetricType.grossSale,
+                    ),
+                  ),
+                );
+                return;
+              }
+
+              setDialogState(() {
+                previewGenerating = false;
+                previewGenerated = hasGeneratedLoadForm;
+              });
+            }
+
+            return Dialog.fullscreen(
+              child: Scaffold(
+                backgroundColor: const Color(0xfff3f4f6),
+                appBar: AppBar(
+                  title: const Text('Load Form Settlement Print Preview'),
+                  actions: [
+                    ElevatedButton.icon(
+                      onPressed: previewGenerating ||
+                              previewGenerated ||
+                              selectedLoadFormRows.isEmpty
+                          ? null
+                          : generateFromPreview,
+                      icon: previewGenerating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              previewGenerated
+                                  ? Icons.check_circle_rounded
+                                  : Icons.playlist_add_check_rounded,
+                              size: 18,
+                            ),
+                      label: Text(
+                        previewGenerating
+                            ? 'Generating...'
+                            : previewGenerated
+                                ? 'Settlement Generated'
+                                : 'Generate Load Form Settlement',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                            previewGenerated ? Colors.green.shade100 : null,
+                        disabledForegroundColor:
+                            previewGenerated ? Colors.green.shade800 : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: printCurrentPage,
+                      icon: const Icon(Icons.print_rounded, size: 18),
+                      label: const Text('Print'),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
-            ),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(22),
-              child: Center(
-                child: LoadFormSettlementPrintable(
-                  state: state,
-                  date: dateController.text.trim(),
-                  distributorName: state.company?.name ?? 'AFRA Trader',
-                  dsrName: selectedDsrId.isEmpty
-                      ? '-'
-                      : _dsrLabel(state.dsrById(selectedDsrId)!),
-                  salesmanName: state.supplierName(selectedSalesmanId),
-                  productLines: productLines,
-                  grossSale: grossSale,
-                  loadAmount: loadAmount,
-                  creditBills: creditBills,
-                  recoveryBills: recoveryBills,
-                  recoveryAmount: recoveryAmount,
-                  totalDsrCash: totalDsrCash,
+                body: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Center(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minWidth: constraints.maxWidth,
+                              ),
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(22),
+                                  child: LoadFormSettlementPrintable(
+                                    key: printableKey,
+                                    state: state,
+                                    date: dateController.text.trim(),
+                                    distributorName:
+                                        state.company?.name ?? 'AFRA Trader',
+                                    dsrName: selectedDsrId.isEmpty
+                                        ? '-'
+                                        : _dsrLabel(
+                                            state.dsrById(selectedDsrId)!,
+                                          ),
+                                    salesmanName:
+                                        state.supplierName(selectedSalesmanId),
+                                    productLines: productLines,
+                                    grossSale: grossSale,
+                                    loadAmount: loadAmount,
+                                    creditBills: creditBills,
+                                    recoveryBills: recoveryBills,
+                                    recoveryAmount: recoveryAmount,
+                                    totalDsrCash: totalDsrCash,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -5455,6 +5594,34 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
           icon: Icons.call_received_rounded,
           color: Colors.purple,
         ),
+        StatCard(
+          title: 'Expenses',
+          value: state.rs(expenseOutflows),
+          icon: Icons.call_made_rounded,
+          color: Colors.orange,
+        ),
+        StatCard(
+          title: 'Expected DSR Cash',
+          value: state.rs(totalDsrCash),
+          icon: Icons.account_balance_wallet_rounded,
+          color: Colors.teal,
+        ),
+        StatCard(
+          title: physicalCash <= 0
+              ? 'Physical Cash'
+              : cashDifference == 0
+                  ? 'Balanced'
+                  : cashDifference > 0
+                      ? 'Excess Cash'
+                      : 'Short Cash',
+          value: state.rs(physicalCash <= 0 ? 0 : cashDifference.abs()),
+          icon: Icons.price_check_rounded,
+          color: physicalCash <= 0 || cashDifference == 0
+              ? Colors.green
+              : cashDifference > 0
+                  ? Colors.blue
+                  : Colors.red,
+        ),
       ],
     );
   }
@@ -5476,7 +5643,11 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
                 controller: tableScrollController,
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
-                  columnSpacing: 22,
+                  columnSpacing: 6,
+                  horizontalMargin: 6,
+                  headingRowHeight: 42,
+                  dataRowMinHeight: 46,
+                  dataRowMaxHeight: 54,
                   columns: const [
                     DataColumn(label: Text('S#')),
                     DataColumn(label: Text('SKU')),
@@ -5486,6 +5657,7 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
                     DataColumn(label: Text('Total Box')),
                     DataColumn(label: Text('Rate')),
                     DataColumn(label: Text('Amount')),
+                    DataColumn(label: Text('Status')),
                   ],
                   rows: [
                     ...productLines.asMap().entries.map((entry) {
@@ -5493,18 +5665,35 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
                       return DataRow(cells: [
                         DataCell(Text('${entry.key + 1}')),
                         DataCell(SizedBox(
-                          width: 240,
+                          width: 108,
                           child: Text(
                             line.productName,
                             overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
                           ),
                         )),
-                        DataCell(Text(line.sku)),
-                        DataCell(Text(line.cartons.toString())),
-                        DataCell(Text(line.looseUnits.toString())),
-                        DataCell(Text(line.quantity.toString())),
-                        DataCell(Text(state.rs(line.rate))),
-                        DataCell(Text(state.rs(line.totalAmount))),
+                        DataCell(SizedBox(
+                            width: 58,
+                            child: Text(line.sku,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12)))),
+                        DataCell(Text(line.cartons.toString(),
+                            style: const TextStyle(fontSize: 12))),
+                        DataCell(Text(line.looseUnits.toString(),
+                            style: const TextStyle(fontSize: 12))),
+                        DataCell(Text(line.quantity.toString(),
+                            style: const TextStyle(fontSize: 12))),
+                        DataCell(Text(state.rs(line.rate),
+                            style: const TextStyle(fontSize: 12))),
+                        DataCell(Text(state.rs(line.totalAmount),
+                            style: const TextStyle(fontSize: 12))),
+                        DataCell(Text(
+                          state.loads.any((load) =>
+                                  load.id == line.loadId && load.isGenerated)
+                              ? 'Generated'
+                              : 'Pending',
+                          style: const TextStyle(fontSize: 12),
+                        )),
                       ]);
                     }),
                     DataRow(cells: [
@@ -5516,6 +5705,7 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
                       DataCell(Text(totalLoadUnits.toString(), style: const TextStyle(fontWeight: FontWeight.w900))),
                       const DataCell(Text('')),
                       DataCell(Text(state.rs(loadAmount), style: const TextStyle(fontWeight: FontWeight.w900))),
+                      const DataCell(Text('')),
                     ]),
                   ],
                 ),
@@ -5541,6 +5731,18 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
         _infoChip(Icons.calendar_month_rounded, 'Date',
             dateController.text.trim().isEmpty ? '-' : formatDateForUi(dateController.text.trim()),
             Colors.green),
+        _infoChip(
+          hasGeneratedLoadForm
+              ? Icons.check_circle_rounded
+              : Icons.pending_actions_rounded,
+          'Status',
+          hasGeneratedLoadForm
+              ? 'Generated'
+              : selectedLoadFormRows.isEmpty
+                  ? 'No Load'
+                  : '${pendingLoadFormRows.length} Pending',
+          hasGeneratedLoadForm ? Colors.green : Colors.orange,
+        ),
       ],
     );
   }
@@ -5607,6 +5809,9 @@ class _LoadFormProductLine {
   final String date;
   final String dsrId;
   final String salesmanId;
+  final int packValue;
+  final double rateValue;
+  final double amountValue;
   int quantity;
 
   _LoadFormProductLine({
@@ -5614,6 +5819,9 @@ class _LoadFormProductLine {
     required this.productId,
     required this.product,
     required this.quantity,
+    this.packValue = 0,
+    this.rateValue = 0,
+    this.amountValue = 0,
     this.date = '',
     this.dsrId = '',
     this.salesmanId = '',
@@ -5622,13 +5830,13 @@ class _LoadFormProductLine {
   String get productName => product?.name ?? productId;
   String get sku => product?.sku ?? '-';
   int get pack {
-    final value = product?.packetsPerCarton ?? 1;
+    final value = packValue > 0 ? packValue : (product?.packetsPerCarton ?? 1);
     return value <= 0 ? 1 : value;
   }
   int get cartons => quantity ~/ pack;
   int get looseUnits => quantity % pack;
-  double get rate => product?.sellingPrice ?? 0;
-  double get totalAmount => quantity * rate;
+  double get rate => rateValue > 0 ? rateValue : (product?.sellingPrice ?? 0);
+  double get totalAmount => amountValue > 0 ? amountValue : quantity * rate;
 }
 
 
@@ -5702,9 +5910,7 @@ class _LoadFormSettlementPrintableState
     for (final note in [5000, 1000, 500, 100, 50, 20, 10]) {
       noteCountControllers[note] = TextEditingController(text: '0');
     }
-    for (final key in ['Coins', 'Short', 'Excess']) {
-      manualCashControllers[key] = TextEditingController(text: '0');
-    }
+    manualCashControllers['Coins'] = TextEditingController(text: '0');
 
     skuRows.addAll(widget.productLines.asMap().entries.map((entry) {
       final line = entry.value;
@@ -5719,9 +5925,6 @@ class _LoadFormSettlementPrintableState
         amount: _moneyController(line.totalAmount),
       );
     }));
-    if (skuRows.isEmpty) {
-      _addSkuRow();
-    }
 
     creditRows.addAll(widget.creditBills.map((sale) {
       return _EditableCreditPrintRow(
@@ -5732,9 +5935,6 @@ class _LoadFormSettlementPrintableState
         note: TextEditingController(),
       );
     }));
-    while (creditRows.length < 4) {
-      _addCreditRow();
-    }
 
     recoveryRows.addAll(widget.recoveryBills.map((recovery) {
       return _EditableRecoveryPrintRow(
@@ -5746,9 +5946,6 @@ class _LoadFormSettlementPrintableState
         note: TextEditingController(),
       );
     }));
-    while (recoveryRows.length < 4) {
-      _addRecoveryRow();
-    }
   }
 
   TextEditingController _moneyController(double value) {
@@ -5804,10 +6001,14 @@ class _LoadFormSettlementPrintableState
       total += note * toInt(controller.text);
     });
     total += toDouble(manualCashControllers['Coins']?.text ?? '0');
-    total -= toDouble(manualCashControllers['Short']?.text ?? '0');
-    total += toDouble(manualCashControllers['Excess']?.text ?? '0');
     return total;
   }
+
+  double get shortAmount =>
+      math.max(totalDsrCashValue - cashNoteTotal, 0).toDouble();
+
+  double get excessAmount =>
+      math.max(cashNoteTotal - totalDsrCashValue, 0).toDouble();
 
   double get skuAmountTotal {
     return skuRows.fold(0.0, (sum, row) => sum + toDouble(row.amount.text));
@@ -5821,39 +6022,6 @@ class _LoadFormSettlementPrintableState
     return recoveryRows.fold(0.0, (sum, row) => sum + toDouble(row.received.text));
   }
 
-  void _addSkuRow() {
-    skuRows.add(_EditableSkuPrintRow(
-      sr: TextEditingController(text: '${skuRows.length + 1}'),
-      sku: TextEditingController(),
-      skuCode: TextEditingController(),
-      ctn: TextEditingController(text: '0'),
-      box: TextEditingController(text: '0'),
-      totalBox: TextEditingController(text: '0'),
-      rate: TextEditingController(text: '0'),
-      amount: TextEditingController(text: '0'),
-    ));
-  }
-
-  void _addCreditRow() {
-    creditRows.add(_EditableCreditPrintRow(
-      billNo: TextEditingController(),
-      date: TextEditingController(),
-      dsr: TextEditingController(text: widget.dsrName),
-      amount: TextEditingController(text: '0'),
-      note: TextEditingController(),
-    ));
-  }
-
-  void _addRecoveryRow() {
-    recoveryRows.add(_EditableRecoveryPrintRow(
-      billNo: TextEditingController(),
-      date: TextEditingController(),
-      dsr: TextEditingController(text: widget.dsrName),
-      received: TextEditingController(text: '0'),
-      balance: TextEditingController(text: '0'),
-      note: TextEditingController(),
-    ));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -5876,12 +6044,18 @@ class _LoadFormSettlementPrintableState
               Expanded(child: _editableCashTable()),
             ],
           ),
-          const SizedBox(height: 12),
-          _editableSkuTable(),
-          const SizedBox(height: 12),
-          _editableCreditTable(),
-          const SizedBox(height: 12),
-          _editableRecoveryTable(),
+          if (skuRows.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _editableSkuTable(),
+          ],
+          if (creditRows.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _editableCreditTable(),
+          ],
+          if (recoveryRows.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _editableRecoveryTable(),
+          ],
         ],
       ),
     );
@@ -5956,13 +6130,21 @@ class _LoadFormSettlementPrintableState
         _plainCell(state.rs(amount.toDouble())),
       ]);
     }
-    for (final label in ['Coins', 'Short', 'Excess']) {
-      rows.add([
-        label,
-        '',
-        _printInput(manualCashControllers[label]!, number: true),
-      ]);
-    }
+    rows.add([
+      'Coins',
+      '',
+      _printInput(manualCashControllers['Coins']!, number: true),
+    ]);
+    rows.add([
+      'Short',
+      '',
+      _plainCell(state.rs(shortAmount), bold: shortAmount > 0),
+    ]);
+    rows.add([
+      'Excess',
+      '',
+      _plainCell(state.rs(excessAmount), bold: excessAmount > 0),
+    ]);
 
     return _editablePrintTable(
       title: '${widget.distributorName} Cash',
@@ -5974,115 +6156,76 @@ class _LoadFormSettlementPrintableState
   }
 
   Widget _editableSkuTable() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _editablePrintTable(
-          title: 'Detail of Loaded SKUs From Secondary Order',
-          headers: const [
-            'S#',
-            'SKU',
-            'SKU Code',
-            'CTN',
-            'Box',
-            'Total Box',
-            'Rate',
-            'Amount'
-          ],
-          rows: skuRows.map((row) {
-            return [
-              _printInput(row.sr, number: true),
-              _printInput(row.sku),
-              _printInput(row.skuCode),
-              _printInput(row.ctn, number: true),
-              _printInput(row.box, number: true),
-              _printInput(row.totalBox, number: true),
-              _printInput(row.rate, number: true),
-              _printInput(row.amount, number: true),
-            ];
-          }).toList(),
-          totalLabel: 'Total Amount',
-          totalWidget: _plainCell(state.rs(skuAmountTotal), bold: true),
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: () => setState(_addSkuRow),
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('Add SKU Row'),
-          ),
-        ),
+    return _editablePrintTable(
+      title: 'Detail of Loaded SKUs From Secondary Order',
+      headers: const [
+        'S#',
+        'SKU',
+        'SKU Code',
+        'CTN',
+        'Box',
+        'Total Box',
+        'Rate',
+        'Amount'
       ],
+      rows: skuRows.map((row) {
+        return [
+          _printInput(row.sr, number: true),
+          _printInput(row.sku),
+          _printInput(row.skuCode),
+          _printInput(row.ctn, number: true),
+          _printInput(row.box, number: true),
+          _printInput(row.totalBox, number: true),
+          _printInput(row.rate, number: true),
+          _printInput(row.amount, number: true),
+        ];
+      }).toList(),
+      totalLabel: 'Total Amount',
+      totalWidget: _plainCell(state.rs(skuAmountTotal), bold: true),
     );
   }
 
   Widget _editableCreditTable() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _editablePrintTable(
-          title: 'Detail of Credit Bills',
-          headers: const ['Bill No', 'Date', 'DSR', 'Amount', 'Notes'],
-          rows: creditRows.map((row) {
-            return [
-              _printInput(row.billNo),
-              _printInput(row.date),
-              _printInput(row.dsr),
-              _printInput(row.amount, number: true),
-              _printInput(row.note),
-            ];
-          }).toList(),
-          totalLabel: 'Total Amount',
-          totalWidget: _plainCell(state.rs(creditTotal), bold: true),
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: () => setState(_addCreditRow),
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('Add Credit Row'),
-          ),
-        ),
-      ],
+    return _editablePrintTable(
+      title: 'Detail of Credit Bills',
+      headers: const ['Bill No', 'Date', 'DSR', 'Amount', 'Notes'],
+      rows: creditRows.map((row) {
+        return [
+          _printInput(row.billNo),
+          _printInput(row.date),
+          _printInput(row.dsr),
+          _printInput(row.amount, number: true),
+          _printInput(row.note),
+        ];
+      }).toList(),
+      totalLabel: 'Total Amount',
+      totalWidget: _plainCell(state.rs(creditTotal), bold: true),
     );
   }
 
   Widget _editableRecoveryTable() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _editablePrintTable(
-          title: 'Detail of Recovery Bills',
-          headers: const [
-            'Cheque/Bill No',
-            'Date',
-            'DSR',
-            'Received Rs.',
-            'Balance Rs.',
-            'Notes'
-          ],
-          rows: recoveryRows.map((row) {
-            return [
-              _printInput(row.billNo),
-              _printInput(row.date),
-              _printInput(row.dsr),
-              _printInput(row.received, number: true),
-              _printInput(row.balance, number: true),
-              _printInput(row.note),
-            ];
-          }).toList(),
-          totalLabel: 'Total Recovery',
-          totalWidget: _plainCell(state.rs(recoveryTotal), bold: true),
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: () => setState(_addRecoveryRow),
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('Add Recovery Row'),
-          ),
-        ),
+    return _editablePrintTable(
+      title: 'Detail of Recovery Bills',
+      headers: const [
+        'Cheque/Bill No',
+        'Date',
+        'DSR',
+        'Received Rs.',
+        'Balance Rs.',
+        'Notes'
       ],
+      rows: recoveryRows.map((row) {
+        return [
+          _printInput(row.billNo),
+          _printInput(row.date),
+          _printInput(row.dsr),
+          _printInput(row.received, number: true),
+          _printInput(row.balance, number: true),
+          _printInput(row.note),
+        ];
+      }).toList(),
+      totalLabel: 'Total Recovery',
+      totalWidget: _plainCell(state.rs(recoveryTotal), bold: true),
     );
   }
 
@@ -6345,8 +6488,8 @@ class _OrderBookingPageState extends State<OrderBookingPage> {
         filterCard(
           title: 'Sales Filters',
           children: [
-            filterText('From Date', fromController),
-            filterText('To Date', toController),
+            filterText('From Date', fromController, onChanged: () => setState(() {})),
+            filterText('To Date', toController, onChanged: () => setState(() {})),
             filterDropdown(
               label: 'Booker / DSR',
               value: dsrId,
@@ -6431,8 +6574,8 @@ class _RecoveryPageState extends State<RecoveryPage> {
         filterCard(
           title: 'Recovery Filters',
           children: [
-            filterText('From Date', fromController),
-            filterText('To Date', toController),
+            filterText('From Date', fromController, onChanged: () => setState(() {})),
+            filterText('To Date', toController, onChanged: () => setState(() {})),
             filterDropdown(
               label: 'Booker / DSR',
               value: dsrId,
@@ -6503,8 +6646,8 @@ class _ExpensePageState extends State<ExpensePage> {
         filterCard(
           title: 'Expense Filters',
           children: [
-            filterText('From Date', fromController),
-            filterText('To Date', toController),
+            filterText('From Date', fromController, onChanged: () => setState(() {})),
+            filterText('To Date', toController, onChanged: () => setState(() {})),
             filterDropdown(
               label: 'Booker',
               value: dsrId,
@@ -6748,44 +6891,17 @@ class _DepositPageState extends State<DepositPage> {
         await runAction(
           context,
           () async {
-            double remainingPay = amount;
             final pendingRows = selectedPurchases
                 .where((purchase) => purchase.remainingAmount > 0)
                 .toList()
               ..sort((a, b) => a.date.compareTo(b.date));
 
-            for (final purchase in pendingRows) {
-              if (remainingPay <= 0) break;
-              final payForInvoice = remainingPay > purchase.remainingAmount
-                  ? purchase.remainingAmount
-                  : remainingPay;
-              final newPaid = purchase.paidAmount + payForInvoice;
-              final newRemaining = (purchase.remainingAmount - payForInvoice)
-                  .clamp(0, double.infinity)
-                  .toDouble();
-
-              await state.service.updateCompanyPurchasePayment(
-                purchaseId: purchase.id,
-                paidAmount: newPaid,
-                remainingAmount: newRemaining,
-              );
-
-              remainingPay -= payForInvoice;
-            }
-
-            await state.service.addDeposit(
+            await state.service.payPrimaryInvoices(
               companyId: state.companyId,
+              purchaseIds: pendingRows.map((purchase) => purchase.id).toList(),
+              distributor: distributorName,
               party: partyName,
-              notes: const {
-                5000: 0,
-                1000: 0,
-                500: 0,
-                100: 0,
-                50: 0,
-                20: 0,
-                10: 0,
-              },
-              coins: amount,
+              amount: amount,
             );
           },
           widget.onChanged,
@@ -6896,6 +7012,354 @@ class _DepositPageState extends State<DepositPage> {
   }
 }
 
+class InvestmentPage extends StatefulWidget {
+  final AppState state;
+  final Future<void> Function() onChanged;
+
+  const InvestmentPage({
+    super.key,
+    required this.state,
+    required this.onChanged,
+  });
+
+  @override
+  State<InvestmentPage> createState() => _InvestmentPageState();
+}
+
+class _InvestmentPageState extends State<InvestmentPage> {
+  static const investmentTypes = <String>[
+    'Owner Investment',
+    'Partner Investment',
+    'Capital Injection',
+    'Bank Investment',
+    'Loan Received',
+    'Asset Investment',
+    'Emergency Investment',
+    'Other',
+  ];
+
+  static const paymentMethods = <String>[
+    'Cash',
+    'Bank Transfer',
+    'Cheque',
+    'Online Transfer',
+    'Other',
+  ];
+
+  final fromController = TextEditingController();
+  final toController = TextEditingController();
+  final investorController = TextEditingController();
+  String typeFilter = '';
+  String paymentFilter = '';
+
+  AppState get state => widget.state;
+
+  @override
+  void dispose() {
+    fromController.dispose();
+    toController.dispose();
+    investorController.dispose();
+    super.dispose();
+  }
+
+  List<InvestmentEntry> get filteredRows {
+    final investor = investorController.text.trim().toLowerCase();
+    return state.investments.where((item) {
+      final dateMatches =
+          dateInRange(item.date, fromController.text, toController.text);
+      final investorMatches = investor.isEmpty ||
+          item.investorName.toLowerCase().contains(investor);
+      final typeMatches = typeFilter.isEmpty || item.investmentType == typeFilter;
+      final paymentMatches =
+          paymentFilter.isEmpty || item.paymentMethod == paymentFilter;
+      return dateMatches &&
+          investorMatches &&
+          typeMatches &&
+          paymentMatches;
+    }).toList();
+  }
+
+  Widget _filterInput(String label, TextEditingController controller) {
+    return SizedBox(
+      width: 170,
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: label.contains('Date') ? 'YYYY-MM-DD' : null,
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
+  }
+
+  void showInvestmentDialog({InvestmentEntry? editItem}) {
+    final dateController =
+        TextEditingController(text: editItem?.date ?? state.today);
+    final investorNameController =
+        TextEditingController(text: editItem?.investorName ?? '');
+    final customTypeController =
+        TextEditingController(text: editItem?.customInvestmentType ?? '');
+    final customPaymentController =
+        TextEditingController(text: editItem?.customPaymentMethod ?? '');
+    final referenceController =
+        TextEditingController(text: editItem?.referenceNo ?? '');
+    final amountController = TextEditingController(
+        text: editItem == null ? '' : editItem.amount.toStringAsFixed(0));
+    final noteController = TextEditingController(text: editItem?.note ?? '');
+    String investmentType = editItem?.investmentType ?? investmentTypes.first;
+    String paymentMethod = editItem?.paymentMethod ?? paymentMethods.first;
+
+    statefulDialog(
+      context: context,
+      title: editItem == null ? 'Add Investment' : 'Edit Investment',
+      builder: (setDialog) => [
+        textInput(label: 'Date', controller: dateController),
+        textInput(label: 'Investor Name', controller: investorNameController),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: investmentType,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Investment Type'),
+          items: investmentTypes
+              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .toList(),
+          onChanged: (value) =>
+              setDialog(() => investmentType = value ?? investmentType),
+        ),
+        if (investmentType == 'Other')
+          textInput(
+              label: 'Other Investment Type',
+              controller: customTypeController),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: paymentMethod,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Payment Method'),
+          items: paymentMethods
+              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .toList(),
+          onChanged: (value) =>
+              setDialog(() => paymentMethod = value ?? paymentMethod),
+        ),
+        if (paymentMethod == 'Other')
+          textInput(
+              label: 'Custom Payment Method',
+              controller: customPaymentController),
+        textInput(label: 'Reference Number', controller: referenceController),
+        textInput(label: 'Amount', controller: amountController, number: true),
+        textInput(label: 'Note', controller: noteController),
+      ],
+      onSave: () async {
+        final date = dateController.text.trim();
+        final investor = investorNameController.text.trim();
+        final amount = toDouble(amountController.text);
+        if (date.isEmpty) throw Exception('Date is required');
+        if (investor.isEmpty) throw Exception('Investor name is required');
+        if (amount <= 0) throw Exception('Amount must be greater than 0');
+        if (investmentType == 'Other' &&
+            customTypeController.text.trim().isEmpty) {
+          throw Exception('Other investment type is required');
+        }
+        if (paymentMethod == 'Other' &&
+            customPaymentController.text.trim().isEmpty) {
+          throw Exception('Custom payment method is required');
+        }
+
+        await runAction(
+          context,
+          () async {
+            if (editItem == null) {
+              await state.service.addInvestment(
+                companyId: state.companyId,
+                date: date,
+                investorName: investor,
+                investmentType: investmentType,
+                customInvestmentType: customTypeController.text.trim(),
+                paymentMethod: paymentMethod,
+                customPaymentMethod: customPaymentController.text.trim(),
+                referenceNo: referenceController.text.trim(),
+                amount: amount,
+                note: noteController.text.trim(),
+              );
+            } else {
+              await state.service.updateInvestment(
+                id: editItem.id,
+                date: date,
+                investorName: investor,
+                investmentType: investmentType,
+                customInvestmentType: customTypeController.text.trim(),
+                paymentMethod: paymentMethod,
+                customPaymentMethod: customPaymentController.text.trim(),
+                referenceNo: referenceController.text.trim(),
+                amount: amount,
+                note: noteController.text.trim(),
+              );
+            }
+          },
+          widget.onChanged,
+        );
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = filteredRows;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        moduleHeader(
+          title: 'Investment',
+          subtitle:
+              'Track owner, partner, capital, bank, loan, asset, emergency and other investments without counting them as sales or profit.',
+          buttonText: 'Add Investment',
+          icon: Icons.savings_rounded,
+          onTap: () => showInvestmentDialog(),
+        ),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            StatCard(
+                title: 'Total Investment',
+                value: state.rs(state.totalInvestment),
+                icon: Icons.account_balance_rounded,
+                color: Colors.indigo),
+            StatCard(
+                title: 'Cash Investment',
+                value: state.rs(state.cashInvestment),
+                icon: Icons.payments_rounded,
+                color: Colors.green),
+            StatCard(
+                title: 'Bank / Online',
+                value: state.rs(state.bankOnlineInvestment),
+                icon: Icons.account_balance_wallet_rounded,
+                color: Colors.blue),
+            StatCard(
+                title: 'Loan Investment',
+                value: state.rs(state.loanInvestment),
+                icon: Icons.request_quote_rounded,
+                color: Colors.orange),
+          ],
+        ),
+        const SizedBox(height: 18),
+        filterCard(
+          title: 'Investment Filters',
+          children: [
+            _filterInput('From Date', fromController),
+            _filterInput('To Date', toController),
+            _filterInput('Investor', investorController),
+            filterDropdown(
+              label: 'Investment Type',
+              value: typeFilter,
+              items: investmentTypes
+                  .map((item) => FilterOption(item, item))
+                  .toList(),
+              onChanged: (value) => setState(() => typeFilter = value),
+            ),
+            filterDropdown(
+              label: 'Payment Method',
+              value: paymentFilter,
+              items: paymentMethods
+                  .map((item) => FilterOption(item, item))
+                  .toList(),
+              onChanged: (value) => setState(() => paymentFilter = value),
+            ),
+            clearFilterButton(() {
+              setState(() {
+                fromController.clear();
+                toController.clear();
+                investorController.clear();
+                typeFilter = '';
+                paymentFilter = '';
+              });
+            }),
+          ],
+        ),
+        const SizedBox(height: 18),
+        DataCard(
+          title: 'Investment History',
+          child: rows.isEmpty
+              ? emptyBox('No investment records found.')
+              : horizontalTable(
+                  DataTable(
+                    columnSpacing: 6,
+                    horizontalMargin: 6,
+                    headingRowHeight: 42,
+                    dataRowMinHeight: 46,
+                    dataRowMaxHeight: 54,
+                    columns: const [
+                      DataColumn(label: Text('Date')),
+                      DataColumn(label: Text('Investor')),
+                      DataColumn(label: Text('Type')),
+                      DataColumn(label: Text('Payment Method')),
+                      DataColumn(label: Text('Reference')),
+                      DataColumn(label: Text('Amount')),
+                      DataColumn(label: Text('Note')),
+                      DataColumn(label: Text('Actions')),
+                    ],
+                    rows: rows.map((item) {
+                      return DataRow(cells: [
+                        DataCell(SizedBox(
+                            width: 72,
+                            child: Text(formatDateForUi(item.date),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12)))),
+                        DataCell(SizedBox(
+                            width: 90,
+                            child: Text(item.investorName,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12)))),
+                        DataCell(SizedBox(
+                            width: 110,
+                            child: Text(item.displayType,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12)))),
+                        DataCell(SizedBox(
+                            width: 100,
+                            child: Text(item.displayPaymentMethod,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12)))),
+                        DataCell(SizedBox(
+                            width: 90,
+                            child: Text(
+                                item.referenceNo.isEmpty
+                                    ? '-'
+                                    : item.referenceNo,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12)))),
+                        DataCell(Text(state.rs(item.amount),
+                            style: const TextStyle(fontSize: 12))),
+                        DataCell(SizedBox(
+                            width: 130,
+                            child: Text(item.note.isEmpty ? '-' : item.note,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12)))),
+                        DataCell(actionButtons(
+                          onEdit: () => showInvestmentDialog(editItem: item),
+                          onDelete: () => confirmDelete(
+                            context: context,
+                            title: 'Delete Investment',
+                            message:
+                                'Delete this investment record? Investment totals and available cash will be recalculated.',
+                            action: () =>
+                                state.service.deleteInvestment(item.id),
+                            onChanged: widget.onChanged,
+                          ),
+                        )),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
 class ClaimPage extends StatefulWidget {
   final AppState state;
   final Future<void> Function() onChanged;
@@ -6943,8 +7407,8 @@ class _ClaimPageState extends State<ClaimPage> {
         filterCard(
           title: 'Claim / Expiry Filters',
           children: [
-            filterText('From Date', fromController),
-            filterText('To Date', toController),
+            filterText('From Date', fromController, onChanged: () => setState(() {})),
+            filterText('To Date', toController, onChanged: () => setState(() {})),
             filterDropdown(
               label: 'Product',
               value: productId,
@@ -6980,11 +7444,13 @@ enum ReportType {
   dsrDailySales,
   dsrWiseSales,
   productWiseSales,
+  secondaryLoad,
   distributorCredit,
   recovery,
   cashIn,
   deposit,
   expense,
+  investment,
   claimExpiry,
   stock,
   lowStock,
@@ -7033,6 +7499,14 @@ const List<_ReportItem> _reportItems = [
     color: Colors.deepPurple,
   ),
   _ReportItem(
+    type: ReportType.secondaryLoad,
+    title: 'Secondary Load Report',
+    description:
+        'Saved DSR loads with cartons, boxes, returns, discounts, net load and physical cash.',
+    icon: Icons.move_down_rounded,
+    color: Colors.cyan,
+  ),
+  _ReportItem(
     type: ReportType.distributorCredit,
     title: 'Distributor Credit Report',
     description:
@@ -7069,6 +7543,14 @@ const List<_ReportItem> _reportItems = [
     description: 'Fuel, office, advance, and other expense history.',
     icon: Icons.money_off_rounded,
     color: Colors.red,
+  ),
+  _ReportItem(
+    type: ReportType.investment,
+    title: 'Investment Report',
+    description:
+        'Owner, partner, capital, bank, loan and other investment history.',
+    icon: Icons.savings_rounded,
+    color: Colors.lightGreen,
   ),
   _ReportItem(
     type: ReportType.claimExpiry,
@@ -7223,6 +7705,11 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   final dayController = TextEditingController();
   final monthController = TextEditingController();
   final yearController = TextEditingController();
+  final investorController = TextEditingController();
+  String dsrFilter = '';
+  String productFilter = '';
+  String investmentTypeFilter = '';
+  String paymentMethodFilter = '';
 
   AppState get state => widget.state;
 
@@ -7233,6 +7720,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     dayController.dispose();
     monthController.dispose();
     yearController.dispose();
+    investorController.dispose();
     super.dispose();
   }
 
@@ -7265,20 +7753,68 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   List<SaleEntry> filteredSales({SaleType? type}) {
     return state.sales.where((sale) {
       if (type != null && sale.type != type) return false;
+      if (dsrFilter.isNotEmpty && sale.dsrId != dsrFilter) return false;
+      if (productFilter.isNotEmpty && sale.productId != productFilter) {
+        return false;
+      }
       return dateOk(sale.date);
     }).toList();
   }
 
-  List<RecoveryEntry> filteredRecoveries() =>
-      state.recoveries.where((item) => dateOk(item.date)).toList();
-  List<ExpenseEntry> filteredExpenses() =>
-      state.expenses.where((item) => dateOk(item.date)).toList();
+  List<RecoveryEntry> filteredRecoveries() => state.recoveries.where((item) {
+        if (dsrFilter.isNotEmpty && item.dsrId != dsrFilter) return false;
+        return dateOk(item.date);
+      }).toList();
+
+  List<ExpenseEntry> filteredExpenses() => state.expenses.where((item) {
+        if (dsrFilter.isNotEmpty && item.dsrId != dsrFilter) return false;
+        return dateOk(item.date);
+      }).toList();
+
   List<DepositEntry> filteredDeposits() =>
       state.deposits.where((item) => dateOk(item.date)).toList();
-  List<ClaimEntry> filteredClaims() =>
-      state.claims.where((item) => dateOk(item.date)).toList();
-  List<CompanyPurchase> filteredPurchases() =>
-      state.companyPurchases.where((item) => dateOk(item.date)).toList();
+
+  List<ClaimEntry> filteredClaims() => state.claims.where((item) {
+        if (productFilter.isNotEmpty && item.productId != productFilter) {
+          return false;
+        }
+        return dateOk(item.date);
+      }).toList();
+
+  List<CompanyPurchase> filteredPurchases() => state.companyPurchases.where((item) {
+        if (productFilter.isNotEmpty && item.productId != productFilter) {
+          return false;
+        }
+        return dateOk(item.date);
+      }).toList();
+
+  List<LoadEntry> filteredLoads() => state.loads.where((item) {
+        if (dsrFilter.isNotEmpty && item.dsrId != dsrFilter) return false;
+        if (productFilter.isNotEmpty && item.productId != productFilter) {
+          return false;
+        }
+        return dateOk(item.date);
+      }).toList();
+
+  List<InvestmentEntry> filteredInvestments() {
+    final investor = investorController.text.trim().toLowerCase();
+    return state.investments.where((item) {
+      if (!dateOk(item.date)) return false;
+      if (investor.isNotEmpty &&
+          !item.investorName.toLowerCase().contains(investor)) {
+        return false;
+      }
+      if (investmentTypeFilter.isNotEmpty &&
+          item.investmentType != investmentTypeFilter) {
+        return false;
+      }
+      if (paymentMethodFilter.isNotEmpty &&
+          item.paymentMethod != paymentMethodFilter) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
 
   Widget filterInput(String label, TextEditingController controller,
       {double width = 150, bool number = false}) {
@@ -7302,6 +7838,13 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       case ReportType.dsrWiseSales:
       case ReportType.productWiseSales:
         return filteredSales().fold<double>(0, (sum, item) => sum + item.total);
+      case ReportType.secondaryLoad:
+        final seen = <String>{};
+        return filteredLoads().fold<double>(0, (sum, item) {
+          final key = item.settlementId.isEmpty ? item.id : item.settlementId;
+          final extra = seen.add(key) ? item.extraAmount : 0;
+          return sum + effectiveLoadNet(state, item) + extra;
+        });
       case ReportType.distributorCredit:
         final credit = filteredSales(type: SaleType.credit)
             .fold<double>(0, (sum, item) => sum + item.total);
@@ -7316,12 +7859,22 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
             .fold<double>(0, (sum, item) => sum + item.total);
         final recovery = filteredRecoveries()
             .fold<double>(0, (sum, item) => sum + item.receivedAmount);
-        return cash + recovery;
+        final otherInflows = filteredExpenses()
+            .where((item) => AppState.cashInExpenseTypes.contains(item.type))
+            .fold<double>(0, (sum, item) => sum + item.amount);
+        final investments = filteredInvestments()
+            .where((item) => item.isCash)
+            .fold<double>(0, (sum, item) => sum + item.amount);
+        return cash + recovery + otherInflows + investments;
       case ReportType.deposit:
         return filteredDeposits()
             .fold<double>(0, (sum, item) => sum + item.total);
       case ReportType.expense:
         return filteredExpenses()
+            .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
+            .fold<double>(0, (sum, item) => sum + item.amount);
+      case ReportType.investment:
+        return filteredInvestments()
             .fold<double>(0, (sum, item) => sum + item.amount);
       case ReportType.claimExpiry:
         return filteredClaims()
@@ -7337,11 +7890,13 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                     sum + (item.warehouseStock * item.purchasePrice));
       case ReportType.profitLoss:
         final saleProfit = filteredSales().fold<double>(0, (sum, sale) {
-          final cost = (state.productById(sale.productId)?.purchasePrice ?? 0) *
-              sale.quantity;
-          return sum + sale.total - cost;
+          final cost = sale.purchaseCost > 0
+              ? sale.purchaseCost
+              : (state.productById(sale.productId)?.purchasePrice ?? 0);
+          return sum + sale.total - (cost * sale.quantity);
         });
         final expenses = filteredExpenses()
+            .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
             .fold<double>(0, (sum, item) => sum + item.amount);
         final claims =
             filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
@@ -7368,37 +7923,76 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
             children: [
               DataCard(
                 title: widget.item.title,
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: widget.item.color.withOpacity(0.12),
-                      child: Icon(widget.item.icon, color: widget.item.color),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 720;
+                    final details = Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: widget.item.color.withOpacity(0.12),
+                          child:
+                              Icon(widget.item.icon, color: widget.item.color),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Filtered Total: ${state.rs(filteredTotal)}',
+                                style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.item.description,
+                                style: const TextStyle(
+                                    color: Color(0xff6b7280), height: 1.4),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+
+                    final actions = Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: printCurrentPage,
+                          icon: const Icon(Icons.print_rounded),
+                          label: const Text('Print'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back_rounded),
+                          label: const Text('Back'),
+                        ),
+                      ],
+                    );
+
+                    if (compact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'Filtered Total: ${state.rs(filteredTotal)}',
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w900),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.item.description,
-                            style: const TextStyle(
-                                color: Color(0xff6b7280), height: 1.4),
-                          ),
+                          details,
+                          const SizedBox(height: 12),
+                          Align(alignment: Alignment.centerLeft, child: actions),
                         ],
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      label: const Text('Back'),
-                    ),
-                  ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: details),
+                        const SizedBox(width: 14),
+                        actions,
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 18),
@@ -7411,6 +8005,63 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                   filterInput('Month', monthController,
                       width: 110, number: true),
                   filterInput('Year', yearController, width: 110, number: true),
+                  if ({
+                    ReportType.dsrDailySales,
+                    ReportType.dsrWiseSales,
+                    ReportType.secondaryLoad,
+                    ReportType.distributorCredit,
+                    ReportType.recovery,
+                    ReportType.cashIn,
+                    ReportType.expense,
+                  }.contains(widget.item.type))
+                    filterDropdown(
+                      label: 'DSR',
+                      value: dsrFilter,
+                      items: state.dsrs
+                          .map((item) => FilterOption(item.id, item.name))
+                          .toList(),
+                      onChanged: (value) => setState(() => dsrFilter = value),
+                    ),
+                  if ({
+                    ReportType.dsrDailySales,
+                    ReportType.productWiseSales,
+                    ReportType.secondaryLoad,
+                    ReportType.claimExpiry,
+                    ReportType.stock,
+                    ReportType.lowStock,
+                    ReportType.profitLoss,
+                  }.contains(widget.item.type))
+                    filterDropdown(
+                      label: 'Product',
+                      value: productFilter,
+                      items: state.products
+                          .map((item) => FilterOption(item.id, item.name))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => productFilter = value),
+                    ),
+                  if (widget.item.type == ReportType.investment)
+                    filterInput('Investor', investorController, width: 170),
+                  if (widget.item.type == ReportType.investment)
+                    filterDropdown(
+                      label: 'Investment Type',
+                      value: investmentTypeFilter,
+                      items: _InvestmentPageState.investmentTypes
+                          .map((item) => FilterOption(item, item))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => investmentTypeFilter = value),
+                    ),
+                  if (widget.item.type == ReportType.investment)
+                    filterDropdown(
+                      label: 'Payment Method',
+                      value: paymentMethodFilter,
+                      items: _InvestmentPageState.paymentMethods
+                          .map((item) => FilterOption(item, item))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => paymentMethodFilter = value),
+                    ),
                   clearFilterButton(() {
                     setState(() {
                       fromController.clear();
@@ -7418,6 +8069,11 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                       dayController.clear();
                       monthController.clear();
                       yearController.clear();
+                      investorController.clear();
+                      dsrFilter = '';
+                      productFilter = '';
+                      investmentTypeFilter = '';
+                      paymentMethodFilter = '';
                     });
                   }),
                 ],
@@ -7439,6 +8095,8 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         return groupedDsrSalesReport();
       case ReportType.productWiseSales:
         return groupedProductSalesReport();
+      case ReportType.secondaryLoad:
+        return secondaryLoadReport();
       case ReportType.distributorCredit:
         return distributorCreditReport();
       case ReportType.recovery:
@@ -7449,6 +8107,8 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         return depositTable(state, rows: filteredDeposits());
       case ReportType.expense:
         return expenseTable(state, rows: filteredExpenses());
+      case ReportType.investment:
+        return investmentReport();
       case ReportType.claimExpiry:
         return claimTable(state, rows: filteredClaims());
       case ReportType.stock:
@@ -7470,13 +8130,39 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
           ? emptyBox('No records found for selected filters.')
           : horizontalTable(
               DataTable(
+                columnSpacing: 6,
+                horizontalMargin: 6,
+                headingRowHeight: 42,
+                dataRowMinHeight: 46,
+                dataRowMaxHeight: 54,
                 columns: headers
-                    .map((header) => DataColumn(label: Text(header)))
+                    .map((header) => DataColumn(
+                          label: Text(
+                            header,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ))
                     .toList(),
                 rows: rows
                     .map((row) => DataRow(
-                        cells:
-                            row.map((cell) => DataCell(Text(cell))).toList()))
+                        cells: row
+                            .map((cell) => DataCell(
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      minWidth: 48,
+                                      maxWidth: 160,
+                                    ),
+                                    child: Text(
+                                      cell,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ))
+                            .toList()))
                     .toList(),
               ),
             ),
@@ -7495,27 +8181,42 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
               .where((sale) => sale.type == SaleType.credit)
               .fold<double>(0, (sum, sale) => sum + sale.total);
           final total = sales.fold<double>(0, (sum, sale) => sum + sale.total);
+          final quantity =
+              sales.fold<int>(0, (sum, sale) => sum + sale.quantity);
+          final recovery = filteredRecoveries()
+              .where((item) => item.dsrId == dsr.id)
+              .fold<double>(0, (sum, item) => sum + item.receivedAmount);
+          final pending =
+              (credit - recovery).clamp(0, double.infinity).toDouble();
           return [
             dsr.name,
+            state.supplierName(dsr.supplierId),
             dsr.route.isEmpty ? '-' : dsr.route,
             sales.length.toString(),
+            quantity.toString(),
             state.rs(cash),
             state.rs(credit),
             state.rs(total),
+            state.rs(recovery),
+            state.rs(pending),
           ];
         })
-        .where((row) => row[2] != '0')
+        .where((row) => row[3] != '0')
         .toList();
 
     return reportTable(
       title: 'DSR-wise Sales Summary',
       headers: const [
         'Booker',
+        'Salesman',
         'Route',
         'Bills',
+        'Qty Sold',
         'Cash Sale',
         'Credit Sale',
-        'Total Sale'
+        'Gross Sale',
+        'Recovery',
+        'Pending Credit'
       ],
       rows: rows,
     );
@@ -7552,6 +8253,75 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         'Total Sale'
       ],
       rows: rows,
+    );
+  }
+
+  Widget secondaryLoadReport() {
+    final seenSettlements = <String>{};
+    final rows = filteredLoads().map((load) {
+      final key = load.settlementId.isEmpty ? load.id : load.settlementId;
+      final extra = seenSettlements.add(key) ? load.extraAmount : 0.0;
+      return [
+        formatDateForUi(load.date),
+        state.dsrName(load.dsrId),
+        state.supplierName(load.supplierId),
+        state.productName(load.productId),
+        load.quantity.toString(),
+        state.rs(effectiveLoadGross(state, load)),
+        load.returnQuantity.toString(),
+        state.rs(effectiveLoadReturnAmount(state, load)),
+        state.rs(effectiveLoadDiscount(state, load)),
+        state.rs(extra),
+        state.rs(effectiveLoadNet(state, load) + extra),
+        state.rs(load.physicalCash),
+        load.isGenerated ? 'Generated' : 'Pending',
+      ];
+    }).toList();
+
+    return reportTable(
+      title: 'Secondary Load History',
+      headers: const [
+        'Date',
+        'DSR',
+        'Salesman',
+        'Product',
+        'Load Boxes',
+        'Gross Load',
+        'Return Boxes',
+        'Return Amount',
+        'Discount',
+        'Extra',
+        'Net Load',
+        'Physical Cash',
+        'Status'
+      ],
+      rows: rows,
+    );
+  }
+
+  Widget investmentReport() {
+    return reportTable(
+      title: 'Investment History',
+      headers: const [
+        'Date',
+        'Investor',
+        'Type',
+        'Payment Method',
+        'Reference',
+        'Amount',
+        'Note'
+      ],
+      rows: filteredInvestments().map((item) {
+        return [
+          formatDateForUi(item.date),
+          item.investorName,
+          item.displayType,
+          item.displayPaymentMethod,
+          item.referenceNo.isEmpty ? '-' : item.referenceNo,
+          state.rs(item.amount),
+          item.note.isEmpty ? '-' : item.note,
+        ];
+      }).toList(),
     );
   }
 
@@ -7621,6 +8391,27 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       ));
     }
 
+    for (final inflow in filteredExpenses()
+        .where((item) => AppState.cashInExpenseTypes.contains(item.type))) {
+      rows.add(_DashboardLedgerRow(
+        date: inflow.date,
+        type: inflow.type,
+        party: state.dsrName(inflow.dsrId),
+        detail: inflow.note.isEmpty ? '-' : inflow.note,
+        amount: inflow.amount,
+      ));
+    }
+
+    for (final investment in filteredInvestments().where((item) => item.isCash)) {
+      rows.add(_DashboardLedgerRow(
+        date: investment.date,
+        type: 'Cash Investment',
+        party: investment.investorName,
+        detail: investment.displayType,
+        amount: investment.amount,
+      ));
+    }
+
     rows.sort((a, b) => b.date.compareTo(a.date));
 
     return reportTable(
@@ -7656,14 +8447,15 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         'Box',
         'Per Carton',
         'CTN',
+        'Loose Box',
         'Purchase',
         'Selling',
         'Value'
       ],
       rows: products.map((product) {
-        final cartons = product.packetsPerCarton <= 0
-            ? 0
-            : product.warehouseStock / product.packetsPerCarton;
+        final pack = product.packetsPerCarton <= 0 ? 1 : product.packetsPerCarton;
+        final cartons = product.warehouseStock ~/ pack;
+        final looseBoxes = product.warehouseStock % pack;
         final value = product.warehouseStock * product.purchasePrice;
         return [
           product.name,
@@ -7672,8 +8464,9 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
           product.mfgDate.isEmpty ? '-' : product.mfgDate,
           product.expDate.isEmpty ? '-' : product.expDate,
           product.warehouseStock.toString(),
-          product.packetsPerCarton.toString(),
-          cartons.toStringAsFixed(cartons == cartons.roundToDouble() ? 0 : 1),
+          pack.toString(),
+          cartons.toString(),
+          looseBoxes.toString(),
           state.rs(product.purchasePrice),
           state.rs(product.sellingPrice),
           state.rs(value),
@@ -7689,12 +8482,15 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
     final saleTotal = sales.fold<double>(0, (sum, sale) => sum + sale.total);
     final costTotal = sales.fold<double>(0, (sum, sale) {
-      final product = state.productById(sale.productId);
-      return sum + ((product?.purchasePrice ?? 0) * sale.quantity);
+      final unitCost = sale.purchaseCost > 0
+          ? sale.purchaseCost
+          : (state.productById(sale.productId)?.purchasePrice ?? 0);
+      return sum + (unitCost * sale.quantity);
     });
     final grossProfit = saleTotal - costTotal;
-    final expenseTotal =
-        expenses.fold<double>(0, (sum, item) => sum + item.amount);
+    final expenseTotal = expenses
+        .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
+        .fold<double>(0, (sum, item) => sum + item.amount);
     final claimTotal = claims.fold<double>(0, (sum, item) => sum + item.amount);
     final netProfit = grossProfit - expenseTotal - claimTotal;
 
@@ -8153,21 +8949,38 @@ Widget moduleHeader({
 }) {
   return DataCard(
     title: title,
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
-            subtitle,
-            style: const TextStyle(
-              color: Color(0xff6b7280),
-              height: 1.5,
-            ),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 680;
+        final description = Text(
+          subtitle,
+          style: const TextStyle(
+            color: Color(0xff6b7280),
+            height: 1.5,
           ),
-        ),
-        const SizedBox(width: 14),
-        primaryButton(buttonText, icon, onTap),
-      ],
+        );
+        final button = primaryButton(buttonText, icon, onTap);
+
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              description,
+              const SizedBox(height: 12),
+              Align(alignment: Alignment.centerLeft, child: button),
+            ],
+          );
+        }
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: description),
+            const SizedBox(width: 14),
+            button,
+          ],
+        );
+      },
     ),
   );
 }
@@ -8215,6 +9028,10 @@ Widget productTable(
                 DataColumn(label: Text('Loose Box')),
                 DataColumn(label: Text('Total Stock Box')),
                 DataColumn(label: Text('Buy Rate')),
+                DataColumn(label: Text('Selling Rate')),
+                DataColumn(label: Text('Minimum Stock')),
+                DataColumn(label: Text('Purchased')),
+                DataColumn(label: Text('Sold')),
                 DataColumn(label: Text('Stock Value')),
                 DataColumn(label: Text('Actions')),
               ],
@@ -8244,6 +9061,10 @@ Widget productTable(
                     DataCell(Text('$looseBox Box')),
                     DataCell(Text('${x.warehouseStock} Box')),
                     DataCell(Text(state.rs(x.purchasePrice))),
+                    DataCell(Text(state.rs(x.sellingPrice))),
+                    DataCell(Text('${x.lowStockLimit} Box')),
+                    DataCell(Text('${state.totalPurchasedForProduct(x.id)} Box')),
+                    DataCell(Text('${state.totalSoldForProduct(x.id)} Box')),
                     DataCell(Text(state.rs(stockValue))),
                     DataCell(
                       context == null || onChanged == null
@@ -8439,7 +9260,398 @@ Widget companyPurchaseTable(AppState state, {BuildContext? context}) {
   );
 }
 
-Widget salesTable(AppState state, {List<SaleEntry>? rows}) {
+bool _isGeneratedLoadFormSale(SaleEntry sale) {
+  return sale.sourceType.trim().toLowerCase() == 'load_form' ||
+      sale.loadSettlementId.trim().isNotEmpty ||
+      sale.loadEntryId.trim().isNotEmpty ||
+      sale.billNo.trim().toUpperCase().startsWith('LF-');
+}
+
+class GeneratedLoadFormHistoryPage extends StatelessWidget {
+  final AppState state;
+  final SaleEntry selectedSale;
+
+  const GeneratedLoadFormHistoryPage({
+    super.key,
+    required this.state,
+    required this.selectedSale,
+  });
+
+  bool get isGeneratedSale => _isGeneratedLoadFormSale(selectedSale);
+
+  List<SaleEntry> get relatedSales {
+    final selectedSettlementId = selectedSale.loadSettlementId.trim();
+    final selectedBillNo = selectedSale.billNo.trim().toLowerCase();
+
+    final rows = state.sales.where((sale) {
+      if (isGeneratedSale) {
+        if (selectedSettlementId.isNotEmpty) {
+          return sale.loadSettlementId.trim() == selectedSettlementId;
+        }
+
+        if (selectedBillNo.isNotEmpty &&
+            sale.billNo.trim().toLowerCase() == selectedBillNo) {
+          return true;
+        }
+
+        return _isGeneratedLoadFormSale(sale) &&
+            sale.dsrId == selectedSale.dsrId &&
+            sale.date.trim() == selectedSale.date.trim();
+      }
+
+      return sale.billNo.trim().toLowerCase() == selectedBillNo;
+    }).toList();
+
+    if (rows.isEmpty) return [selectedSale];
+    rows.sort((a, b) => a.productId.compareTo(b.productId));
+    return rows;
+  }
+
+  List<LoadEntry> get relatedLoads {
+    if (!isGeneratedSale) return const [];
+
+    final settlementIds = <String>{
+      selectedSale.loadSettlementId.trim(),
+      ...relatedSales.map((sale) => sale.loadSettlementId.trim()),
+    }..removeWhere((id) => id.isEmpty);
+
+    final loadEntryIds = <String>{
+      selectedSale.loadEntryId.trim(),
+      ...relatedSales.map((sale) => sale.loadEntryId.trim()),
+    }..removeWhere((id) => id.isEmpty);
+
+    var rows = state.loads.where((load) {
+      if (loadEntryIds.contains(load.id)) return true;
+      return load.settlementId.trim().isNotEmpty &&
+          settlementIds.contains(load.settlementId.trim());
+    }).toList();
+
+    if (rows.isEmpty) {
+      rows = state.loads.where((load) {
+        return load.dsrId == selectedSale.dsrId &&
+            load.date.trim() == selectedSale.date.trim() &&
+            load.isGenerated;
+      }).toList();
+    }
+
+    rows.sort((a, b) => a.productId.compareTo(b.productId));
+    return rows;
+  }
+
+  List<_ProductLoadFormRow> get productRows {
+    final loads = relatedLoads;
+    if (loads.isNotEmpty) {
+      return loads.map((load) {
+        final product = state.productById(load.productId);
+        final pack = load.packetsPerCarton > 0
+            ? load.packetsPerCarton
+            : (product?.packetsPerCarton ?? 1);
+
+        final issuedCartons = load.loadCartons > 0 || load.loadLooseBoxes > 0
+            ? load.loadCartons
+            : load.quantity ~/ pack;
+        final issuedBoxes = load.loadCartons > 0 || load.loadLooseBoxes > 0
+            ? load.loadLooseBoxes
+            : load.quantity % pack;
+        final returnedCartons =
+            load.returnCartons > 0 || load.returnLooseBoxes > 0
+                ? load.returnCartons
+                : load.returnQuantity ~/ pack;
+        final returnedBoxes =
+            load.returnCartons > 0 || load.returnLooseBoxes > 0
+                ? load.returnLooseBoxes
+                : load.returnQuantity % pack;
+        final rate = load.sellingPrice > 0
+            ? load.sellingPrice
+            : (product?.sellingPrice ?? 0);
+        final saleAmount = load.netAmount > 0
+            ? load.netAmount
+            : math.max(
+                (load.quantity - load.returnQuantity) * rate,
+                0,
+              ).toDouble();
+
+        return _ProductLoadFormRow(
+          productName: product?.name ?? state.productName(load.productId),
+          manufacturerCode: product?.sku ?? '',
+          issuedUnits: load.quantity,
+          issuedFreeUnits: 0,
+          issuedBoxes: issuedBoxes,
+          issuedCartons: issuedCartons,
+          returnedUnits: load.returnQuantity,
+          returnedBoxes: returnedBoxes,
+          returnedCartons: returnedCartons,
+          saleAmount: saleAmount,
+        );
+      }).toList();
+    }
+
+    return relatedSales.map((sale) {
+      final product = state.productById(sale.productId);
+      final pack = math.max(product?.packetsPerCarton ?? 1, 1).toInt();
+      return _ProductLoadFormRow(
+        productName: product?.name ?? state.productName(sale.productId),
+        manufacturerCode: product?.sku ?? '',
+        issuedUnits: sale.quantity,
+        issuedFreeUnits: 0,
+        issuedBoxes: sale.quantity % pack,
+        issuedCartons: sale.quantity ~/ pack,
+        returnedUnits: 0,
+        returnedBoxes: 0,
+        returnedCartons: 0,
+        saleAmount: sale.total,
+      );
+    }).toList();
+  }
+
+  String get salesmanName {
+    final dsr = state.dsrById(selectedSale.dsrId);
+    return state.supplierName(dsr?.supplierId ?? '');
+  }
+
+  String get printDate {
+    final now = DateTime.now();
+    final iso = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    return formatDateForUi(iso);
+  }
+
+  double get totalSale =>
+      productRows.fold<double>(0, (sum, row) => sum + row.saleAmount);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xfff3f4f6),
+      appBar: AppBar(
+        title: const Text('Product Load Form'),
+        actions: [
+          ElevatedButton.icon(
+            onPressed: printCurrentPage,
+            icon: const Icon(Icons.print_rounded, size: 18),
+            label: const Text('Print'),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Close',
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Container(
+                      width: 1280,
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _header(),
+                          const SizedBox(height: 14),
+                          _productsTable(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _header() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.black87),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'PRODUCT LOAD FORM',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            runAlignment: WrapAlignment.center,
+            spacing: 28,
+            runSpacing: 8,
+            children: [
+              Text(
+                'DSR: ${state.dsrName(selectedSale.dsrId)}',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                'Salesman: $salesmanName',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                'Print Date: $printDate',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _productsTable() {
+    final rows = productRows;
+    return Container(
+      decoration: BoxDecoration(border: Border.all(color: Colors.black87)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.black87)),
+            ),
+            child: const Text(
+              'PRODUCT DETAILS',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          Table(
+            border: TableBorder.all(color: Colors.black45, width: 0.7),
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            columnWidths: const {
+              0: FixedColumnWidth(42),
+              1: FixedColumnWidth(250),
+              2: FixedColumnWidth(125),
+              3: FixedColumnWidth(86),
+              4: FixedColumnWidth(90),
+              5: FixedColumnWidth(95),
+              6: FixedColumnWidth(72),
+              7: FixedColumnWidth(78),
+              8: FixedColumnWidth(98),
+              9: FixedColumnWidth(82),
+              10: FixedColumnWidth(90),
+              11: FixedColumnWidth(105),
+            },
+            children: [
+              TableRow(
+                decoration: const BoxDecoration(color: Color(0xfff3f4f6)),
+                children: const [
+                  'S#',
+                  'SKU / Product',
+                  'Manufacturer Code',
+                  'Issued Units',
+                  'Issued Free Units',
+                  'Total Issued Units',
+                  'Box',
+                  'Cartons',
+                  'Returned Units',
+                  'Box',
+                  'Cartons',
+                  'Sale',
+                ].map((value) => _loadFormCell(value, bold: true)).toList(),
+              ),
+              ...List.generate(rows.length, (index) {
+                final row = rows[index];
+                return TableRow(
+                  children: [
+                    _loadFormCell('${index + 1}'),
+                    _loadFormCell(row.productName),
+                    _loadFormCell(row.manufacturerCode.isEmpty
+                        ? '-'
+                        : row.manufacturerCode),
+                    _loadFormCell('${row.issuedUnits}'),
+                    _loadFormCell('${row.issuedFreeUnits}'),
+                    _loadFormCell('${row.totalIssuedUnits}'),
+                    _loadFormCell('${row.issuedBoxes}'),
+                    _loadFormCell('${row.issuedCartons}'),
+                    _loadFormCell('${row.returnedUnits}'),
+                    _loadFormCell('${row.returnedBoxes}'),
+                    _loadFormCell('${row.returnedCartons}'),
+                    _loadFormCell(state.rs(row.saleAmount)),
+                  ],
+                );
+              }),
+              TableRow(
+                children: [
+                  _loadFormCell(''),
+                  _loadFormCell('TOTAL', bold: true),
+                  for (int i = 0; i < 9; i++) _loadFormCell(''),
+                  _loadFormCell(state.rs(totalSale), bold: true),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductLoadFormRow {
+  final String productName;
+  final String manufacturerCode;
+  final int issuedUnits;
+  final int issuedFreeUnits;
+  final int issuedBoxes;
+  final int issuedCartons;
+  final int returnedUnits;
+  final int returnedBoxes;
+  final int returnedCartons;
+  final double saleAmount;
+
+  const _ProductLoadFormRow({
+    required this.productName,
+    required this.manufacturerCode,
+    required this.issuedUnits,
+    required this.issuedFreeUnits,
+    required this.issuedBoxes,
+    required this.issuedCartons,
+    required this.returnedUnits,
+    required this.returnedBoxes,
+    required this.returnedCartons,
+    required this.saleAmount,
+  });
+
+  int get totalIssuedUnits => issuedUnits + issuedFreeUnits;
+}
+
+Widget _loadFormCell(String value, {bool bold = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+    child: Text(
+      value,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 11.5,
+        fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
+      ),
+    ),
+  );
+}
+
+
+Widget salesTable(
+  AppState state, {
+  List<SaleEntry>? rows,
+  BuildContext? navigationContext,
+  bool enableGeneratedDetails = false,
+}) {
   final data = rows ?? state.sales;
 
   return DataCard(
@@ -8448,6 +9660,7 @@ Widget salesTable(AppState state, {List<SaleEntry>? rows}) {
         ? emptyBox('No sales found.')
         : horizontalTable(
             DataTable(
+              showCheckboxColumn: false,
               columnSpacing: 14,
               horizontalMargin: 8,
               headingRowHeight: 44,
@@ -8464,21 +9677,76 @@ Widget salesTable(AppState state, {List<SaleEntry>? rows}) {
                 DataColumn(label: Text('Type')),
                 DataColumn(label: Text('Total')),
               ],
-              rows: data.map((x) {
-                final dsr = state.dsrById(x.dsrId);
+              rows: data.map((sale) {
+                final dsr = state.dsrById(sale.dsrId);
+                final navContext = navigationContext;
+                final canOpenDetails =
+                    enableGeneratedDetails && navContext != null;
+
+                void openDetails() {
+                  if (!canOpenDetails || navContext == null) return;
+                  Navigator.push(
+                    navContext,
+                    MaterialPageRoute(
+                      builder: (_) => GeneratedLoadFormHistoryPage(
+                        state: state,
+                        selectedSale: sale,
+                      ),
+                    ),
+                  );
+                }
+
                 return DataRow(
+                  onSelectChanged:
+                      canOpenDetails ? (_) => openDetails() : null,
+                  mouseCursor: canOpenDetails
+                      ? MaterialStateProperty.resolveWith<MouseCursor>(
+                          (_) => SystemMouseCursors.click,
+                        )
+                      : null,
+                  color: canOpenDetails
+                      ? MaterialStateProperty.resolveWith<Color?>((states) {
+                          if (states.contains(MaterialState.pressed)) {
+                            return AppTheme.primary.withOpacity(0.10);
+                          }
+                          if (states.contains(MaterialState.hovered)) {
+                            return AppTheme.primary.withOpacity(0.055);
+                          }
+                          return Colors.transparent;
+                        })
+                      : null,
                   cells: [
-                    DataCell(SizedBox(
-                        width: 82,
-                        child:
-                            Text(x.billNo, overflow: TextOverflow.ellipsis))),
+                    DataCell(
+                      SizedBox(
+                        width: 98,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                sale.billNo,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (canOpenDetails)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.open_in_new_rounded,
+                                  size: 15,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                     DataCell(SizedBox(
                         width: 92,
-                        child: Text(formatDateForUi(x.date),
+                        child: Text(formatDateForUi(sale.date),
                             overflow: TextOverflow.ellipsis))),
                     DataCell(SizedBox(
                         width: 110,
-                        child: Text(state.dsrName(x.dsrId),
+                        child: Text(state.dsrName(sale.dsrId),
                             overflow: TextOverflow.ellipsis))),
                     DataCell(SizedBox(
                         width: 120,
@@ -8486,21 +9754,22 @@ Widget salesTable(AppState state, {List<SaleEntry>? rows}) {
                             overflow: TextOverflow.ellipsis))),
                     DataCell(SizedBox(
                         width: 130,
-                        child: Text(state.productName(x.productId),
+                        child: Text(state.productName(sale.productId),
                             overflow: TextOverflow.ellipsis))),
                     DataCell(SizedBox(
-                        width: 42, child: Text(x.quantity.toString()))),
+                        width: 42, child: Text(sale.quantity.toString()))),
                     DataCell(SizedBox(
                         width: 70,
-                        child: Text(state.rs(x.price),
+                        child: Text(state.rs(sale.price),
                             overflow: TextOverflow.ellipsis))),
                     DataCell(SizedBox(
                         width: 58,
-                        child: Text(x.type == SaleType.cash ? 'Cash' : 'Credit',
+                        child: Text(
+                            sale.type == SaleType.cash ? 'Cash' : 'Credit',
                             overflow: TextOverflow.ellipsis))),
                     DataCell(SizedBox(
                         width: 82,
-                        child: Text(state.rs(x.total),
+                        child: Text(state.rs(sale.total),
                             overflow: TextOverflow.ellipsis))),
                   ],
                 );
@@ -8509,6 +9778,7 @@ Widget salesTable(AppState state, {List<SaleEntry>? rows}) {
           ),
   );
 }
+
 
 Widget recoveryTable(AppState state, {List<RecoveryEntry>? rows}) {
   final data = rows ?? state.recoveries;
@@ -8975,6 +10245,37 @@ String formatDateForUi(String value) {
   return clean;
 }
 
+double effectiveLoadRate(AppState state, LoadEntry load) {
+  if (load.sellingPrice > 0) return load.sellingPrice;
+  return state.productById(load.productId)?.sellingPrice ?? 0;
+}
+
+double effectiveLoadGross(AppState state, LoadEntry load) {
+  if (load.grossAmount > 0) return load.grossAmount;
+  return load.quantity * effectiveLoadRate(state, load);
+}
+
+double effectiveLoadReturnAmount(AppState state, LoadEntry load) {
+  if (load.returnAmount > 0) return load.returnAmount;
+  return load.returnQuantity * effectiveLoadRate(state, load);
+}
+
+double effectiveLoadDiscount(AppState state, LoadEntry load) {
+  if (load.discountAmount > 0) return load.discountAmount;
+  final percent = load.companyDiscountPercent + load.tradeOfferPercent;
+  if (percent <= 0) return 0;
+  return effectiveLoadGross(state, load) * percent / 100;
+}
+
+double effectiveLoadNet(AppState state, LoadEntry load) {
+  if (load.netAmount > 0) return load.netAmount;
+  return (effectiveLoadGross(state, load) -
+          effectiveLoadReturnAmount(state, load) -
+          effectiveLoadDiscount(state, load))
+      .clamp(0, double.infinity)
+      .toDouble();
+}
+
 Widget filterCard({
   required String title,
   required List<Widget> children,
@@ -8990,7 +10291,11 @@ Widget filterCard({
   );
 }
 
-Widget filterText(String label, TextEditingController controller) {
+Widget filterText(
+  String label,
+  TextEditingController controller, {
+  VoidCallback? onChanged,
+}) {
   return SizedBox(
     width: 160,
     child: TextField(
@@ -8999,7 +10304,7 @@ Widget filterText(String label, TextEditingController controller) {
         labelText: label,
         hintText: label.contains('Date') ? 'YYYY-MM-DD' : null,
       ),
-      onChanged: (_) {},
+      onChanged: (_) => onChanged?.call(),
     ),
   );
 }
@@ -9010,18 +10315,39 @@ Widget filterDropdown({
   required List<FilterOption> items,
   required ValueChanged<String> onChanged,
 }) {
-  return SizedBox(
-    width: 190,
-    child: DropdownButtonFormField<String>(
-      value: value,
-      decoration: InputDecoration(labelText: label),
-      items: [
-        const DropdownMenuItem(value: '', child: Text('All')),
-        ...items
-            .map((x) => DropdownMenuItem(value: x.value, child: Text(x.label))),
-      ],
-      onChanged: (newValue) => onChanged(newValue ?? ''),
-    ),
+  return Builder(
+    builder: (context) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final width = screenWidth < 520
+          ? (screenWidth - 64).clamp(160.0, 260.0).toDouble()
+          : 190.0;
+
+      return SizedBox(
+        width: width,
+        child: DropdownButtonFormField<String>(
+          value: value,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: label),
+          items: [
+            const DropdownMenuItem(
+              value: '',
+              child: Text('All', overflow: TextOverflow.ellipsis),
+            ),
+            ...items.map(
+              (x) => DropdownMenuItem(
+                value: x.value,
+                child: Text(
+                  x.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+          onChanged: (newValue) => onChanged(newValue ?? ''),
+        ),
+      );
+    },
   );
 }
 
@@ -9208,7 +10534,7 @@ Future<void> runAction(
     if (!context.mounted) return;
     showSnack(
       context,
-      error.toString().replaceAll('Exception: ', ''),
+      friendlyErrorMessage(error),
       type: AppToastType.error,
     );
   }

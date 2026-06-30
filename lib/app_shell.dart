@@ -40,6 +40,7 @@ class _AppShellState extends State<AppShell> {
     'Recovery',
     'Expenses',
     'Deposit',
+    'Investment',
     'Claims / Expiry',
     'Reports',
   ];
@@ -64,7 +65,7 @@ class _AppShellState extends State<AppShell> {
         return AlertDialog(
           title: const Text('Reset all data?'),
           content: const Text(
-            'Warning: if you tap Reset, all your app data will be removed permanently. This includes products, stock, primary receiving, sales, recovery, expenses, deposits, claims, DSR, salesman, and reports data. This action cannot be undone.',
+            'Warning: if you tap Reset, all your app data will be removed permanently. This includes products, stock, primary receiving, sales, recovery, expenses, deposits, investments, claims, DSR, salesman, and reports data. This action cannot be undone.',
           ),
           actions: [
             TextButton(
@@ -125,14 +126,6 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       drawer: isDesktop ? null : Drawer(child: sidebar(isDesktop: false)),
-      floatingActionButton: widget.state.profile == null
-          ? null
-          : FloatingActionButton(
-              onPressed: () => showProductDialog(context, widget.state, refresh),
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              child: const Icon(Icons.add_box_rounded),
-            ),
       appBar: isDesktop
           ? null
           : AppBar(
@@ -414,6 +407,7 @@ class _AppShellState extends State<AppShell> {
       Icons.payments_rounded,
       Icons.money_off_rounded,
       Icons.account_balance_rounded,
+      Icons.savings_rounded,
       Icons.report_problem_rounded,
       Icons.bar_chart_rounded,
     ];
@@ -507,6 +501,8 @@ class _AppShellState extends State<AppShell> {
       case 11:
         return DepositPage(state: widget.state, onChanged: refresh);
       case 12:
+        return InvestmentPage(state: widget.state, onChanged: refresh);
+      case 13:
         return ClaimPage(state: widget.state, onChanged: refresh);
       default:
         return ReportsPage(state: widget.state, onChanged: refresh);

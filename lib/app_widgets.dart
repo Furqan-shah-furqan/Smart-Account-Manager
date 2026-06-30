@@ -6,6 +6,62 @@ import 'app_theme.dart';
 
 enum AppToastType { success, error, warning, info }
 
+
+String friendlyErrorMessage(Object error) {
+  final raw = error.toString().trim();
+  final lower = raw.toLowerCase();
+
+  if (lower.contains('not enough distributor stock')) {
+    return 'Not enough distributor stock. Reduce the quantity or receive more stock first.';
+  }
+  if (lower.contains('sale_type') &&
+      (lower.contains('type text') || lower.contains('42804'))) {
+    return 'The sale could not be saved because the database needs an update. Please run the latest Supabase migration and try again.';
+  }
+  if (lower.contains('duplicate key') || lower.contains('23505')) {
+    return 'This record already exists. Please use a different value or update the existing record.';
+  }
+  if (lower.contains('row-level security') || lower.contains('42501')) {
+    return 'You do not have permission to perform this action.';
+  }
+  if (lower.contains('pgrst205') || lower.contains('could not find the table')) {
+    return 'A required database table is missing. Please run the latest Supabase migration.';
+  }
+  if (lower.contains('invalid login credentials')) {
+    return 'The email or password is incorrect.';
+  }
+  if (lower.contains('email rate limit') || lower.contains('too many requests')) {
+    return 'Too many attempts. Please wait a few minutes and try again.';
+  }
+  if (lower.contains('user already registered')) {
+    return 'An account with this email already exists.';
+  }
+  if (lower.contains('socketexception') ||
+      lower.contains('clientexception') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('network')) {
+    return 'Unable to connect. Check your internet connection and try again.';
+  }
+
+  if (raw.startsWith('Exception:')) {
+    final message = raw.substring('Exception:'.length).trim();
+    return message.isEmpty ? 'Something went wrong. Please try again.' : message;
+  }
+
+  final looksLikeDeveloperError = lower.contains('postgrestexception') ||
+      lower.contains('authexception') ||
+      lower.contains('code:') ||
+      lower.contains('details:') ||
+      lower.contains('hint:') ||
+      lower.contains('stack trace');
+
+  if (looksLikeDeveloperError) {
+    return 'Something went wrong while saving your data. Please try again.';
+  }
+
+  return raw.isEmpty ? 'Something went wrong. Please try again.' : raw;
+}
+
 class DataCard extends StatelessWidget {
   final String title;
   final Widget child;
@@ -212,17 +268,51 @@ Widget primaryButton(String text, IconData icon, VoidCallback onPressed) {
 }
 
 Widget horizontalTable(Widget child) {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-          child: child,
-        ),
-      );
-    },
-  );
+  return _ResponsiveHorizontalTable(child: child);
+}
+
+class _ResponsiveHorizontalTable extends StatefulWidget {
+  final Widget child;
+
+  const _ResponsiveHorizontalTable({required this.child});
+
+  @override
+  State<_ResponsiveHorizontalTable> createState() =>
+      _ResponsiveHorizontalTableState();
+}
+
+class _ResponsiveHorizontalTableState
+    extends State<_ResponsiveHorizontalTable> {
+  final ScrollController controller = ScrollController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scrollbar(
+          controller: controller,
+          thumbVisibility: true,
+          trackVisibility: true,
+          interactive: true,
+          child: SingleChildScrollView(
+            controller: controller,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(bottom: 10),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: widget.child,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 Widget emptyBox(String text) {
@@ -378,7 +468,7 @@ void showSnack(
   entry = OverlayEntry(
     builder: (context) {
       return _TopToast(
-        message: message.replaceAll('Exception: ', ''),
+        message: friendlyErrorMessage(message),
         type: toastType,
         width: toastWidth,
         topPadding: topPadding,
@@ -391,7 +481,7 @@ void showSnack(
 
   overlay.insert(entry);
 
-  Timer(const Duration(seconds: 3), () {
+  Timer(const Duration(seconds: 10), () {
     if (entry.mounted) entry.remove();
   });
 }

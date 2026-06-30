@@ -19,6 +19,7 @@ class AppState {
   List<ExpenseEntry> expenses = [];
   List<DepositEntry> deposits = [];
   List<ClaimEntry> claims = [];
+  List<InvestmentEntry> investments = [];
 
   AppState({required this.service});
 
@@ -52,6 +53,7 @@ class AppState {
     expenses = [];
     deposits = [];
     claims = [];
+    investments = [];
   }
 
   Future<void> loadAll() async {
@@ -71,6 +73,7 @@ class AppState {
       expenses = await service.getExpenses();
       deposits = await service.getDeposits();
       claims = await service.getClaims();
+      investments = await service.getInvestments();
     }
   }
 
@@ -152,26 +155,90 @@ class AppState {
     return sales.where((item) => item.type == SaleType.credit).fold(0, (sum, item) => sum + item.total);
   }
 
-  double get totalRecovery => recoveries.fold(0, (sum, item) => sum + item.receivedAmount);
-  double get totalExpenses => expenses.fold(0, (sum, item) => sum + item.amount);
+  static const Set<String> cashInExpenseTypes = {
+    'Extra Payment In',
+    'Advance Payment Return',
+  };
+
+  double get totalRecovery =>
+      recoveries.fold(0, (sum, item) => sum + item.receivedAmount);
+
+  double get totalExpenseOutflows => expenses
+      .where((item) => !cashInExpenseTypes.contains(item.type))
+      .fold(0, (sum, item) => sum + item.amount);
+
+  double get totalOtherCashInflows => expenses
+      .where((item) => cashInExpenseTypes.contains(item.type))
+      .fold(0, (sum, item) => sum + item.amount);
+
+  double get totalExpenses => totalExpenseOutflows;
   double get depositTotal => deposits.fold(0, (sum, item) => sum + item.total);
   double get claimAmount => claims.fold(0, (sum, item) => sum + item.amount);
-  double get companyPayable => companyPurchases.fold(0, (sum, item) => sum + item.remainingAmount);
-  double get purchaseTotal => companyPurchases.fold(0, (sum, item) => sum + item.totalBill);
-  double get marketCredit => creditSales - totalRecovery;
+  double get companyPayable =>
+      companyPurchases.fold(0, (sum, item) => sum + item.remainingAmount);
+  double get purchaseTotal =>
+      companyPurchases.fold(0, (sum, item) => sum + item.totalBill);
+  double get marketCredit =>
+      (creditSales - totalRecovery).clamp(0, double.infinity).toDouble();
+
+  double get totalInvestment =>
+      investments.fold(0, (sum, item) => sum + item.amount);
+
+  double get cashInvestment => investments
+      .where((item) => item.isCash)
+      .fold(0, (sum, item) => sum + item.amount);
+
+  double get bankOnlineInvestment => investments
+      .where((item) => item.isBankOrOnline)
+      .fold(0, (sum, item) => sum + item.amount);
+
+  double get loanInvestment => investments
+      .where((item) => item.investmentType == 'Loan Received')
+      .fold(0, (sum, item) => sum + item.amount);
 
   double get stockValue {
-    return products.fold(0, (sum, item) => sum + (item.warehouseStock * item.purchasePrice));
+    return products.fold(
+        0, (sum, item) => sum + (item.warehouseStock * item.purchasePrice));
   }
 
-  double get cashBalance => cashSales + totalRecovery - totalExpenses - depositTotal;
+  double get cashBalance =>
+      cashSales +
+      totalRecovery +
+      totalOtherCashInflows +
+      cashInvestment -
+      totalExpenseOutflows -
+      depositTotal;
 
   double get monthlyProfitEstimate {
     double cost = 0;
     for (final sale in sales) {
-      cost += (productById(sale.productId)?.purchasePrice ?? 0) * sale.quantity;
+      final snapshotCost = sale.purchaseCost;
+      final unitCost = snapshotCost > 0
+          ? snapshotCost
+          : (productById(sale.productId)?.purchasePrice ?? 0);
+      cost += unitCost * sale.quantity;
     }
-    return grossSale - cost - totalExpenses - claimAmount;
+    return grossSale - cost - totalExpenseOutflows - claimAmount;
+  }
+
+  int totalPurchasedForProduct(String productId) => companyPurchases
+      .where((item) => item.productId == productId)
+      .fold(0, (sum, item) => sum + item.totalPackets);
+
+  int totalSoldForProduct(String productId) => sales
+      .where((item) => item.productId == productId)
+      .fold(0, (sum, item) => sum + item.quantity);
+
+  double get secondaryLoadTotal {
+    final seenSettlements = <String>{};
+    double extra = 0;
+    double rowNet = 0;
+    for (final load in loads) {
+      rowNet += load.netAmount;
+      final key = load.settlementId.isEmpty ? load.id : load.settlementId;
+      if (seenSettlements.add(key)) extra += load.extraAmount;
+    }
+    return rowNet + extra;
   }
 
   List<SaleEntry> salesFor(String dsrId, String date) {
@@ -199,12 +266,27 @@ class AppState {
 
     final gross = dsrSales.fold(0.0, (sum, item) => sum + item.total);
     final credit = dsrSales.where((item) => item.type == SaleType.credit).fold(0.0, (sum, item) => sum + item.total);
-    final fuel = dsrExpenses.where((item) => item.type == 'Fuel Expense').fold(0.0, (sum, item) => sum + item.amount);
-    final office = dsrExpenses.where((item) => item.type == 'Office Expense').fold(0.0, (sum, item) => sum + item.amount);
-    final recovery = dsrRecoveries.fold(0.0, (sum, item) => sum + item.receivedAmount);
+    final fuel = dsrExpenses
+        .where((item) => item.type == 'Fuel Expense')
+        .fold(0.0, (sum, item) => sum + item.amount);
+    final office = dsrExpenses
+        .where((item) => item.type == 'Office Expense')
+        .fold(0.0, (sum, item) => sum + item.amount);
+    final otherOutflows = dsrExpenses
+        .where((item) =>
+            !cashInExpenseTypes.contains(item.type) &&
+            item.type != 'Fuel Expense' &&
+            item.type != 'Office Expense')
+        .fold(0.0, (sum, item) => sum + item.amount);
+    final otherInflows = dsrExpenses
+        .where((item) => cashInExpenseTypes.contains(item.type))
+        .fold(0.0, (sum, item) => sum + item.amount);
+    final recovery =
+        dsrRecoveries.fold(0.0, (sum, item) => sum + item.receivedAmount);
 
     final netSale = gross - returnStockAmount + extraAmount;
-    final netCashSale = netSale - fuel - office - credit;
+    final netCashSale =
+        netSale - fuel - office - otherOutflows - credit + otherInflows;
     final totalDsrCash = netCashSale + recovery;
     final difference = physicalCash - totalDsrCash;
 

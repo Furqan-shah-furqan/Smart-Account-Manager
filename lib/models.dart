@@ -236,10 +236,17 @@ class CompanyPurchase {
   final int packetsPerCarton;
   final int totalPackets;
   final double packetPurchasePrice;
+  final double sellingPrice;
   final double companyDiscount;
+  final double companyDiscountPercent;
+  final double tradeDiscountPercent;
+  final double grossBill;
+  final double discountTotal;
   final double totalBill;
   final double paidAmount;
   final double remainingAmount;
+  final String distributorName;
+  final String manufacturerName;
   final String note;
 
   CompanyPurchase({
@@ -253,14 +260,35 @@ class CompanyPurchase {
     required this.packetsPerCarton,
     required this.totalPackets,
     required this.packetPurchasePrice,
+    required this.sellingPrice,
     required this.companyDiscount,
+    required this.companyDiscountPercent,
+    required this.tradeDiscountPercent,
+    required this.grossBill,
+    required this.discountTotal,
     required this.totalBill,
     required this.paidAmount,
     required this.remainingAmount,
+    required this.distributorName,
+    required this.manufacturerName,
     required this.note,
   });
 
   factory CompanyPurchase.fromMap(Map<String, dynamic> map) {
+    final totalPackets = asInt(map['total_packets']);
+    final purchasePrice = asDouble(map['packet_purchase_price']);
+    final grossFromDb = asDouble(map['gross_bill']);
+    final discountFromDb = asDouble(map['discount_total']);
+    final legacyDiscount = asDouble(map['company_discount']);
+    final totalBillFromDb = asDouble(map['total_bill']);
+    final gross = grossFromDb > 0 ? grossFromDb : totalPackets * purchasePrice;
+    final discount = discountFromDb > 0 ? discountFromDb : legacyDiscount;
+    final totalBill = totalBillFromDb > 0
+        ? totalBillFromDb
+        : (gross - discount).clamp(0, double.infinity).toDouble();
+    final paid = asDouble(map['paid_amount']);
+    final remainingFromDb = asDouble(map['remaining_amount']);
+
     return CompanyPurchase(
       id: asText(map['id']),
       date: asText(map['date']),
@@ -270,12 +298,23 @@ class CompanyPurchase {
       batchNo: asText(map['batch_no']),
       cartons: asInt(map['cartons']),
       packetsPerCarton: asInt(map['packets_per_carton']),
-      totalPackets: asInt(map['total_packets']),
-      packetPurchasePrice: asDouble(map['packet_purchase_price']),
-      companyDiscount: asDouble(map['company_discount']),
-      totalBill: asDouble(map['total_bill']),
-      paidAmount: asDouble(map['paid_amount']),
-      remainingAmount: asDouble(map['remaining_amount']),
+      totalPackets: totalPackets,
+      packetPurchasePrice: purchasePrice,
+      sellingPrice: asDouble(map['selling_price']),
+      companyDiscount: legacyDiscount > 0 ? legacyDiscount : discount,
+      companyDiscountPercent: asDouble(map['company_discount_percent']),
+      tradeDiscountPercent: asDouble(map['trade_discount_percent']),
+      grossBill: gross,
+      discountTotal: discount,
+      totalBill: totalBill,
+      paidAmount: paid,
+      remainingAmount: remainingFromDb > 0
+          ? remainingFromDb
+          : (totalBill - paid).clamp(0, double.infinity).toDouble(),
+      distributorName: asText(map['distributor_name']),
+      manufacturerName: asText(map['manufacturer_name']).isNotEmpty
+          ? asText(map['manufacturer_name'])
+          : asText(map['company_name']),
       note: asText(map['note']),
     );
   }
@@ -311,6 +350,24 @@ class LoadEntry {
   final String supplierId;
   final String productId;
   final int quantity;
+  final String settlementId;
+  final int loadCartons;
+  final int loadLooseBoxes;
+  final int returnCartons;
+  final int returnLooseBoxes;
+  final int returnQuantity;
+  final int packetsPerCarton;
+  final double sellingPrice;
+  final double companyDiscountPercent;
+  final double tradeOfferPercent;
+  final double grossAmount;
+  final double returnAmount;
+  final double discountAmount;
+  final double netAmount;
+  final double extraAmount;
+  final double physicalCash;
+  final String note;
+  final String generatedAt;
 
   LoadEntry({
     required this.id,
@@ -319,16 +376,70 @@ class LoadEntry {
     required this.supplierId,
     required this.productId,
     required this.quantity,
+    required this.settlementId,
+    required this.loadCartons,
+    required this.loadLooseBoxes,
+    required this.returnCartons,
+    required this.returnLooseBoxes,
+    required this.returnQuantity,
+    required this.packetsPerCarton,
+    required this.sellingPrice,
+    required this.companyDiscountPercent,
+    required this.tradeOfferPercent,
+    required this.grossAmount,
+    required this.returnAmount,
+    required this.discountAmount,
+    required this.netAmount,
+    required this.extraAmount,
+    required this.physicalCash,
+    required this.note,
+    required this.generatedAt,
   });
 
+  bool get isGenerated => generatedAt.trim().isNotEmpty;
+
   factory LoadEntry.fromMap(Map<String, dynamic> map) {
+    final quantity = asInt(map['quantity']);
+    final price = asDouble(map['selling_price']);
+    final grossFromDb = asDouble(map['gross_amount']);
+    final returnQty = asInt(map['return_quantity']);
+    final returnFromDb = asDouble(map['return_amount']);
+    final discount = asDouble(map['discount_amount']);
+    final gross = grossFromDb > 0 ? grossFromDb : quantity * price;
+    final returnAmount = returnFromDb > 0 ? returnFromDb : returnQty * price;
+    final netFromDb = asDouble(map['net_amount']);
+
     return LoadEntry(
       id: asText(map['id']),
       date: asText(map['date']),
       dsrId: asText(map['dsr_id']),
       supplierId: asText(map['supplier_id']),
       productId: asText(map['product_id']),
-      quantity: asInt(map['quantity']),
+      quantity: quantity,
+      settlementId: asText(map['settlement_id']),
+      loadCartons: asInt(map['load_cartons']),
+      loadLooseBoxes: asInt(map['load_loose_boxes']),
+      returnCartons: asInt(map['return_cartons']),
+      returnLooseBoxes: asInt(map['return_loose_boxes']),
+      returnQuantity: returnQty,
+      packetsPerCarton: asInt(map['packets_per_carton']) <= 0
+          ? 1
+          : asInt(map['packets_per_carton']),
+      sellingPrice: price,
+      companyDiscountPercent: asDouble(map['company_discount_percent']),
+      tradeOfferPercent: asDouble(map['trade_offer_percent']),
+      grossAmount: gross,
+      returnAmount: returnAmount,
+      discountAmount: discount,
+      netAmount: netFromDb > 0
+          ? netFromDb
+          : (gross - returnAmount - discount)
+              .clamp(0, double.infinity)
+              .toDouble(),
+      extraAmount: asDouble(map['extra_amount']),
+      physicalCash: asDouble(map['physical_cash']),
+      note: asText(map['note']),
+      generatedAt: asText(map['generated_at']),
     );
   }
 }
@@ -342,8 +453,12 @@ class SaleEntry {
   final String productId;
   final int quantity;
   final double price;
+  final double purchaseCost;
   final SaleType type;
   final double total;
+  final String sourceType;
+  final String loadSettlementId;
+  final String loadEntryId;
 
   SaleEntry({
     required this.id,
@@ -354,11 +469,20 @@ class SaleEntry {
     required this.productId,
     required this.quantity,
     required this.price,
+    required this.purchaseCost,
     required this.type,
     required this.total,
+    required this.sourceType,
+    required this.loadSettlementId,
+    required this.loadEntryId,
   });
 
   factory SaleEntry.fromMap(Map<String, dynamic> map) {
+    final quantity = asInt(map['quantity']);
+    final price = asDouble(map['price']);
+    final totalFromDb = asDouble(map['total']);
+    final loadFormAmount = asDouble(map['load_form_amount']);
+
     return SaleEntry(
       id: asText(map['id']),
       billNo: asText(map['bill_no']),
@@ -366,10 +490,18 @@ class SaleEntry {
       dsrId: asText(map['dsr_id']),
       shopkeeperId: asText(map['shopkeeper_id']),
       productId: asText(map['product_id']),
-      quantity: asInt(map['quantity']),
-      price: asDouble(map['price']),
+      quantity: quantity,
+      price: price,
+      purchaseCost: asDouble(map['purchase_cost']),
       type: saleTypeFromDb(asText(map['sale_type'])),
-      total: asDouble(map['total']),
+      total: loadFormAmount > 0
+          ? loadFormAmount
+          : (totalFromDb > 0 ? totalFromDb : quantity * price),
+      sourceType: asText(map['source_type']).isEmpty
+          ? 'manual'
+          : asText(map['source_type']),
+      loadSettlementId: asText(map['load_settlement_id']),
+      loadEntryId: asText(map['load_entry_id']),
     );
   }
 }
@@ -439,6 +571,9 @@ class DepositEntry {
   final String id;
   final String date;
   final String party;
+  final String distributorName;
+  final String referenceNo;
+  final String note;
   final int note5000;
   final int note1000;
   final int note500;
@@ -447,12 +582,16 @@ class DepositEntry {
   final int note20;
   final int note10;
   final double coins;
+  final double paymentAmount;
   final double total;
 
   DepositEntry({
     required this.id,
     required this.date,
     required this.party,
+    required this.distributorName,
+    required this.referenceNo,
+    required this.note,
     required this.note5000,
     required this.note1000,
     required this.note500,
@@ -461,14 +600,29 @@ class DepositEntry {
     required this.note20,
     required this.note10,
     required this.coins,
+    required this.paymentAmount,
     required this.total,
   });
 
   factory DepositEntry.fromMap(Map<String, dynamic> map) {
+    final denominations = asInt(map['note_5000']) * 5000 +
+        asInt(map['note_1000']) * 1000 +
+        asInt(map['note_500']) * 500 +
+        asInt(map['note_100']) * 100 +
+        asInt(map['note_50']) * 50 +
+        asInt(map['note_20']) * 20 +
+        asInt(map['note_10']) * 10 +
+        asDouble(map['coins']);
+    final payment = asDouble(map['payment_amount']);
+    final totalFromDb = asDouble(map['total']);
+
     return DepositEntry(
       id: asText(map['id']),
       date: asText(map['date']),
       party: asText(map['party']),
+      distributorName: asText(map['distributor_name']),
+      referenceNo: asText(map['reference_no']),
+      note: asText(map['note']),
       note5000: asInt(map['note_5000']),
       note1000: asInt(map['note_1000']),
       note500: asInt(map['note_500']),
@@ -477,7 +631,10 @@ class DepositEntry {
       note20: asInt(map['note_20']),
       note10: asInt(map['note_10']),
       coins: asDouble(map['coins']),
-      total: asDouble(map['total']),
+      paymentAmount: payment,
+      total: totalFromDb > 0
+          ? totalFromDb
+          : (payment > 0 ? payment : denominations.toDouble()),
     );
   }
 }
@@ -508,6 +665,62 @@ class ClaimEntry {
       productId: asText(map['product_id']),
       type: asText(map['type']),
       quantity: asInt(map['quantity']),
+      amount: asDouble(map['amount']),
+      note: asText(map['note']),
+    );
+  }
+}
+
+class InvestmentEntry {
+  final String id;
+  final String date;
+  final String investorName;
+  final String investmentType;
+  final String customInvestmentType;
+  final String paymentMethod;
+  final String customPaymentMethod;
+  final String referenceNo;
+  final double amount;
+  final String note;
+
+  InvestmentEntry({
+    required this.id,
+    required this.date,
+    required this.investorName,
+    required this.investmentType,
+    required this.customInvestmentType,
+    required this.paymentMethod,
+    required this.customPaymentMethod,
+    required this.referenceNo,
+    required this.amount,
+    required this.note,
+  });
+
+  String get displayType =>
+      investmentType == 'Other' && customInvestmentType.trim().isNotEmpty
+          ? customInvestmentType.trim()
+          : investmentType;
+
+  String get displayPaymentMethod =>
+      paymentMethod == 'Other' && customPaymentMethod.trim().isNotEmpty
+          ? customPaymentMethod.trim()
+          : paymentMethod;
+
+  bool get isCash => paymentMethod == 'Cash';
+
+  bool get isBankOrOnline =>
+      paymentMethod == 'Bank Transfer' || paymentMethod == 'Online Transfer';
+
+  factory InvestmentEntry.fromMap(Map<String, dynamic> map) {
+    return InvestmentEntry(
+      id: asText(map['id']),
+      date: asText(map['date']),
+      investorName: asText(map['investor_name']),
+      investmentType: asText(map['investment_type']),
+      customInvestmentType: asText(map['custom_investment_type']),
+      paymentMethod: asText(map['payment_method']),
+      customPaymentMethod: asText(map['custom_payment_method']),
+      referenceNo: asText(map['reference_no']),
       amount: asDouble(map['amount']),
       note: asText(map['note']),
     );

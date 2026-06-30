@@ -12,6 +12,20 @@ class SupabaseService {
     return user.id;
   }
 
+
+  Future<String> _activeCompanyId() async {
+    final row = await client
+        .from('profiles')
+        .select('company_id')
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+    final companyId = asText(row?['company_id']);
+    if (companyId.isEmpty) {
+      throw Exception('Company not found. Please create company profile first.');
+    }
+    return companyId;
+  }
+
   void _validateAuthFields({required String email, required String password}) {
     final cleanEmail = email.trim().toLowerCase();
     final emailOk = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(cleanEmail);
@@ -101,80 +115,209 @@ class SupabaseService {
     required String companyName,
     required String fullName,
   }) async {
-    if (companyName.trim().isEmpty) throw Exception('Company name is required');
-    if (fullName.trim().isEmpty) throw Exception('Your name is required');
+    final cleanCompanyName = companyName.trim();
+    final cleanFullName = fullName.trim();
 
-    final company = await client.from('companies').insert({
-      'name': companyName.trim(),
-      'owner_id': currentUserId,
-    }).select().single();
+    if (cleanCompanyName.isEmpty) {
+      throw Exception('Company name is required');
+    }
+    if (cleanFullName.isEmpty) {
+      throw Exception('Your name is required');
+    }
 
-    await client.from('profiles').insert({
+    // A profile may already exist for this auth user (for example, from a
+    // previous setup attempt or an auth trigger). Reuse it instead of trying
+    // to insert a second row and violating profiles_user_id_key.
+    final existingProfile = await client
+        .from('profiles')
+        .select('user_id, company_id')
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+
+    String? companyId;
+    if (existingProfile != null) {
+      final rawCompanyId = existingProfile['company_id'];
+      if (rawCompanyId != null && rawCompanyId.toString().trim().isNotEmpty) {
+        companyId = rawCompanyId.toString();
+      }
+    }
+
+    // Reuse the newest company owned by this user when a previous failed
+    // attempt created the company but did not finish linking the profile.
+    if (companyId == null) {
+      final ownedCompanies = await client
+          .from('companies')
+          .select('id')
+          .eq('owner_id', currentUserId)
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      if (ownedCompanies is List && ownedCompanies.isNotEmpty) {
+        companyId = ownedCompanies.first['id'].toString();
+      }
+    }
+
+    if (companyId == null) {
+      final company = await client.from('companies').insert({
+        'name': cleanCompanyName,
+        'owner_id': currentUserId,
+      }).select('id').single();
+      companyId = company['id'].toString();
+    } else {
+      await client.from('companies').update({
+        'name': cleanCompanyName,
+      }).eq('id', companyId);
+    }
+
+    await client.from('profiles').upsert({
       'user_id': currentUserId,
-      'company_id': company['id'],
-      'full_name': fullName.trim(),
+      'company_id': companyId,
+      'full_name': cleanFullName,
       'role': 'owner',
-    });
+    }, onConflict: 'user_id');
   }
 
   Future<List<Supplier>> getSuppliers() async {
-    final rows = await client.from('suppliers').select().order('created_at');
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('suppliers')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at');
     return rows.map<Supplier>((item) => Supplier.fromMap(asMap(item))).toList();
   }
 
   Future<List<Dsr>> getDsrs() async {
-    final rows = await client.from('dsrs').select().order('created_at');
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('dsrs')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at');
     return rows.map<Dsr>((item) => Dsr.fromMap(asMap(item))).toList();
   }
 
   Future<List<Shopkeeper>> getShopkeepers() async {
-    final rows = await client.from('shopkeepers').select().order('created_at');
-    return rows.map<Shopkeeper>((item) => Shopkeeper.fromMap(asMap(item))).toList();
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('shopkeepers')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at');
+    return rows
+        .map<Shopkeeper>((item) => Shopkeeper.fromMap(asMap(item)))
+        .toList();
   }
 
   Future<List<Product>> getProducts() async {
-    final rows = await client.from('products').select().order('created_at');
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('products')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at');
     return rows.map<Product>((item) => Product.fromMap(asMap(item))).toList();
   }
 
   Future<List<CompanyPurchase>> getCompanyPurchases() async {
-    final rows = await client.from('company_purchases').select().order('created_at', ascending: false);
-    return rows.map<CompanyPurchase>((item) => CompanyPurchase.fromMap(asMap(item))).toList();
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('company_purchases')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    return rows
+        .map<CompanyPurchase>((item) => CompanyPurchase.fromMap(asMap(item)))
+        .toList();
   }
 
   Future<List<DsrStock>> getDsrStocks() async {
-    final rows = await client.from('dsr_stocks').select().order('created_at');
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('dsr_stocks')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at');
     return rows.map<DsrStock>((item) => DsrStock.fromMap(asMap(item))).toList();
   }
 
   Future<List<LoadEntry>> getLoads() async {
-    final rows = await client.from('load_entries').select().order('created_at', ascending: false);
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('load_entries')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
     return rows.map<LoadEntry>((item) => LoadEntry.fromMap(asMap(item))).toList();
   }
 
   Future<List<SaleEntry>> getSales() async {
-    final rows = await client.from('sales').select().order('created_at', ascending: false);
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('sales')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
     return rows.map<SaleEntry>((item) => SaleEntry.fromMap(asMap(item))).toList();
   }
 
   Future<List<RecoveryEntry>> getRecoveries() async {
-    final rows = await client.from('recoveries').select().order('created_at', ascending: false);
-    return rows.map<RecoveryEntry>((item) => RecoveryEntry.fromMap(asMap(item))).toList();
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('recoveries')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    return rows
+        .map<RecoveryEntry>((item) => RecoveryEntry.fromMap(asMap(item)))
+        .toList();
   }
 
   Future<List<ExpenseEntry>> getExpenses() async {
-    final rows = await client.from('expenses').select().order('created_at', ascending: false);
-    return rows.map<ExpenseEntry>((item) => ExpenseEntry.fromMap(asMap(item))).toList();
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('expenses')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    return rows
+        .map<ExpenseEntry>((item) => ExpenseEntry.fromMap(asMap(item)))
+        .toList();
   }
 
   Future<List<DepositEntry>> getDeposits() async {
-    final rows = await client.from('deposits').select().order('created_at', ascending: false);
-    return rows.map<DepositEntry>((item) => DepositEntry.fromMap(asMap(item))).toList();
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('deposits')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    return rows
+        .map<DepositEntry>((item) => DepositEntry.fromMap(asMap(item)))
+        .toList();
   }
 
   Future<List<ClaimEntry>> getClaims() async {
-    final rows = await client.from('claims').select().order('created_at', ascending: false);
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('claims')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
     return rows.map<ClaimEntry>((item) => ClaimEntry.fromMap(asMap(item))).toList();
+  }
+
+  Future<List<InvestmentEntry>> getInvestments() async {
+    final companyId = await _activeCompanyId();
+    final rows = await client
+        .from('investments')
+        .select()
+        .eq('company_id', companyId)
+        .order('date', ascending: false)
+        .order('created_at', ascending: false);
+    return rows
+        .map<InvestmentEntry>((item) => InvestmentEntry.fromMap(asMap(item)))
+        .toList();
   }
 
   Future<void> addSupplier({
@@ -231,6 +374,174 @@ class SupabaseService {
       'area': area.trim(),
       'created_by': currentUserId,
     });
+  }
+
+  Future<Map<String, dynamic>> createPrimaryReceiving({
+    required String companyId,
+    required String invoiceNo,
+    required String distributor,
+    required String manufacturer,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    if (items.isEmpty) throw Exception('At least one product row is required');
+    final result = await client.rpc('create_primary_receiving', params: {
+      'p_company_id': companyId,
+      'p_invoice_no': invoiceNo.trim(),
+      'p_distributor': distributor.trim(),
+      'p_manufacturer': manufacturer.trim(),
+      'p_items': items,
+    });
+    return asMap(result);
+  }
+
+  Future<String> createSecondaryOrder({
+    required String companyId,
+    required String dsrId,
+    required String supplierId,
+    required double extraAmount,
+    required double physicalCash,
+    required String note,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    if (items.isEmpty) throw Exception('At least one load product is required');
+    final result = await client.rpc('create_secondary_order', params: {
+      'p_company_id': companyId,
+      'p_dsr_id': dsrId,
+      'p_supplier_id': supplierId,
+      'p_extra_amount': extraAmount,
+      'p_physical_cash': physicalCash,
+      'p_note': note.trim(),
+      'p_items': items,
+    });
+    return asText(result);
+  }
+
+  Future<Map<String, dynamic>> generateLoadFormSales({
+    required String companyId,
+    required String dsrId,
+    required String date,
+    required double physicalCash,
+  }) async {
+    if (dsrId.trim().isEmpty) throw Exception('Select DSR first');
+    if (date.trim().isEmpty) throw Exception('Select load form date first');
+
+    final result = await client.rpc('generate_load_form_settlement', params: {
+      'p_company_id': companyId,
+      'p_dsr_id': dsrId,
+      'p_date': date.trim(),
+      'p_physical_cash': physicalCash,
+    });
+    return asMap(result);
+  }
+
+  Future<void> payPrimaryInvoices({
+    required String companyId,
+    required List<String> purchaseIds,
+    required String distributor,
+    required String party,
+    required double amount,
+    String referenceNo = '',
+  }) async {
+    if (purchaseIds.isEmpty) throw Exception('No pending invoices selected');
+    await client.rpc('pay_primary_invoices', params: {
+      'p_company_id': companyId,
+      'p_purchase_ids': purchaseIds,
+      'p_distributor': distributor.trim(),
+      'p_party': party.trim(),
+      'p_amount': amount,
+      'p_reference_no': referenceNo.trim(),
+    });
+  }
+
+  Future<void> addInvestment({
+    required String companyId,
+    required String date,
+    required String investorName,
+    required String investmentType,
+    required String customInvestmentType,
+    required String paymentMethod,
+    required String customPaymentMethod,
+    required String referenceNo,
+    required double amount,
+    required String note,
+  }) async {
+    if (investorName.trim().isEmpty) {
+      throw Exception('Investor name is required');
+    }
+    if (investmentType.trim().isEmpty) {
+      throw Exception('Investment type is required');
+    }
+    if (paymentMethod.trim().isEmpty) {
+      throw Exception('Payment method is required');
+    }
+    if (amount <= 0) throw Exception('Amount must be greater than 0');
+    if (investmentType == 'Other' && customInvestmentType.trim().isEmpty) {
+      throw Exception('Other investment type is required');
+    }
+    if (paymentMethod == 'Other' && customPaymentMethod.trim().isEmpty) {
+      throw Exception('Custom payment method is required');
+    }
+
+    await client.from('investments').insert({
+      'company_id': companyId,
+      'date': date.trim().isEmpty ? null : date.trim(),
+      'investor_name': investorName.trim(),
+      'investment_type': investmentType,
+      'custom_investment_type': customInvestmentType.trim(),
+      'payment_method': paymentMethod,
+      'custom_payment_method': customPaymentMethod.trim(),
+      'reference_no': referenceNo.trim(),
+      'amount': amount,
+      'note': note.trim(),
+      'created_by': currentUserId,
+    });
+  }
+
+  Future<void> updateInvestment({
+    required String id,
+    required String date,
+    required String investorName,
+    required String investmentType,
+    required String customInvestmentType,
+    required String paymentMethod,
+    required String customPaymentMethod,
+    required String referenceNo,
+    required double amount,
+    required String note,
+  }) async {
+    final companyId = await _activeCompanyId();
+    if (investorName.trim().isEmpty) {
+      throw Exception('Investor name is required');
+    }
+    if (amount <= 0) throw Exception('Amount must be greater than 0');
+    if (investmentType == 'Other' && customInvestmentType.trim().isEmpty) {
+      throw Exception('Other investment type is required');
+    }
+    if (paymentMethod == 'Other' && customPaymentMethod.trim().isEmpty) {
+      throw Exception('Custom payment method is required');
+    }
+
+    await client.from('investments').update({
+      'date': date.trim().isEmpty ? null : date.trim(),
+      'investor_name': investorName.trim(),
+      'investment_type': investmentType,
+      'custom_investment_type': customInvestmentType.trim(),
+      'payment_method': paymentMethod,
+      'custom_payment_method': customPaymentMethod.trim(),
+      'reference_no': referenceNo.trim(),
+      'amount': amount,
+      'note': note.trim(),
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', id).eq('company_id', companyId);
+  }
+
+  Future<void> deleteInvestment(String id) async {
+    final companyId = await _activeCompanyId();
+    await client
+        .from('investments')
+        .delete()
+        .eq('id', id)
+        .eq('company_id', companyId);
   }
 
   Future<void> addProduct({
@@ -369,7 +680,12 @@ class SupabaseService {
       'created_by': currentUserId,
     });
 
-    final product = await client.from('products').select('warehouse_stock').eq('id', productId).single();
+    final product = await client
+        .from('products')
+        .select('warehouse_stock')
+        .eq('id', productId)
+        .eq('company_id', companyId)
+        .single();
     final warehouseStock = asInt(product['warehouse_stock']);
     await client.from('products').update({
       'warehouse_stock': warehouseStock + totalPackets,
@@ -377,7 +693,7 @@ class SupabaseService {
       'packets_per_carton': packetsPerCarton,
       'company_discount': safeDiscount,
       if (batchNo.trim().isNotEmpty) 'batch_no': batchNo.trim(),
-    }).eq('id', productId);
+    }).eq('id', productId).eq('company_id', companyId);
 
   }
   Future<void> returnStock({
@@ -419,6 +735,7 @@ class SupabaseService {
         .from('products')
         .select('warehouse_stock')
         .eq('id', productId)
+        .eq('company_id', companyId)
         .single();
     final warehouseStock = asInt(product['warehouse_stock']);
     if (warehouseStock < quantity) throw Exception('Not enough distributor stock');
@@ -463,41 +780,14 @@ class SupabaseService {
     if (quantity <= 0) throw Exception('Quantity must be greater than 0');
     if (price <= 0) throw Exception('Price must be greater than 0');
 
-    final product = await client
-        .from('products')
-        .select('warehouse_stock')
-        .eq('id', productId)
-        .single();
-    final warehouseStock = asInt(product['warehouse_stock']);
-
-    if (warehouseStock < quantity) {
-      throw Exception('Not enough distributor stock');
-    }
-
-    await client.from('products').update({
-      'warehouse_stock': warehouseStock - quantity,
-    }).eq('id', productId);
-
-    await client.from('sales').insert({
-      'company_id': companyId,
-      'bill_no': billNo.trim(),
-      'dsr_id': dsrId,
-      'shopkeeper_id': null,
-      'product_id': productId,
-      'quantity': quantity,
-      'price': price,
-      'sale_type': saleTypeToDb(type),
-      'created_by': currentUserId,
-    });
-
-    await client.from('stock_movements').insert({
-      'company_id': companyId,
-      'product_id': productId,
-      'dsr_id': dsrId,
-      'movement_type': type == SaleType.cash ? 'Cash Sale' : 'Credit Sale',
-      'quantity': -quantity,
-      'note': '${billNo.trim()} • Deducted from shared distributor stock',
-      'created_by': currentUserId,
+    await client.rpc('book_sale_atomic', params: {
+      'p_company_id': companyId,
+      'p_bill_no': billNo.trim(),
+      'p_dsr_id': dsrId,
+      'p_product_id': productId,
+      'p_quantity': quantity,
+      'p_price': price,
+      'p_sale_type': saleTypeToDb(type),
     });
   }
 
@@ -508,38 +798,11 @@ class SupabaseService {
     required double amount,
   }) async {
     if (amount <= 0) throw Exception('Amount must be greater than 0');
-
-    final creditRows = await client
-        .from('sales')
-        .select('total')
-        .eq('company_id', companyId)
-        .eq('dsr_id', dsrId)
-        .eq('sale_type', 'credit');
-
-    final recoveryRows = await client
-        .from('recoveries')
-        .select('received_amount')
-        .eq('company_id', companyId)
-        .eq('dsr_id', dsrId);
-
-    final creditTotal = creditRows.fold<double>(
-        0, (sum, item) => sum + asDouble(asMap(item)['total']));
-    final recoveredTotal = recoveryRows.fold<double>(
-        0, (sum, item) => sum + asDouble(asMap(item)['received_amount']));
-    final pending = creditTotal - recoveredTotal;
-
-    if (amount > pending) throw Exception('Recovery is greater than pending credit');
-
-    final balanceAfter = pending - amount;
-
-    await client.from('recoveries').insert({
-      'company_id': companyId,
-      'cheque_bill_no': chequeBillNo.trim(),
-      'dsr_id': dsrId,
-      'shopkeeper_id': null,
-      'received_amount': amount,
-      'balance_after': balanceAfter,
-      'created_by': currentUserId,
+    await client.rpc('add_recovery_atomic', params: {
+      'p_company_id': companyId,
+      'p_cheque_bill_no': chequeBillNo.trim(),
+      'p_dsr_id': dsrId,
+      'p_amount': amount,
     });
   }
 
@@ -592,10 +855,12 @@ class SupabaseService {
     final safePaid = paidAmount < 0 ? 0 : paidAmount;
     final safeRemaining = remainingAmount < 0 ? 0 : remainingAmount;
 
+    final companyId = await _activeCompanyId();
     await client.from('company_purchases').update({
       'paid_amount': safePaid,
       'remaining_amount': safeRemaining,
-    }).eq('id', purchaseId);
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', purchaseId).eq('company_id', companyId);
   }
 
   Future<void> addClaim({
@@ -607,14 +872,13 @@ class SupabaseService {
     required String note,
   }) async {
     if (quantity <= 0) throw Exception('Quantity must be greater than 0');
-    await client.from('claims').insert({
-      'company_id': companyId,
-      'product_id': productId,
-      'type': type,
-      'quantity': quantity,
-      'amount': amount,
-      'note': note.trim(),
-      'created_by': currentUserId,
+    await client.rpc('add_claim_atomic', params: {
+      'p_company_id': companyId,
+      'p_product_id': productId,
+      'p_type': type,
+      'p_quantity': quantity,
+      'p_amount': amount,
+      'p_note': note.trim(),
     });
   }
 
@@ -634,6 +898,7 @@ class SupabaseService {
     final existing = await client
         .from('cash_counts')
         .select('id')
+        .eq('company_id', companyId)
         .eq('dsr_id', dsrId)
         .eq('date', date)
         .maybeSingle();
@@ -656,7 +921,11 @@ class SupabaseService {
     if (existing == null) {
       await client.from('cash_counts').insert(data);
     } else {
-      await client.from('cash_counts').update(data).eq('id', existing['id']);
+      await client
+          .from('cash_counts')
+          .update(data)
+          .eq('id', existing['id'])
+          .eq('company_id', companyId);
     }
   }
 
@@ -668,18 +937,21 @@ class SupabaseService {
     required String address,
   }) async {
     if (name.trim().isEmpty) throw Exception('Supplier name is required');
+    final companyId = await _activeCompanyId();
 
     await client.from('suppliers').update({
       'name': name.trim(),
       'phone': phone.trim(),
       'address': address.trim(),
-    }).eq('id', id);
+    }).eq('id', id).eq('company_id', companyId);
   }
 
   Future<void> deleteSupplier(String id) async {
+    final companyId = await _activeCompanyId();
     final linkedDsrs = await client
         .from('dsrs')
         .select('name, route')
+        .eq('company_id', companyId)
         .eq('supplier_id', id);
 
     if (linkedDsrs.isNotEmpty) {
@@ -694,7 +966,7 @@ class SupabaseService {
       );
     }
 
-    await client.from('suppliers').delete().eq('id', id);
+    await client.from('suppliers').delete().eq('id', id).eq('company_id', companyId);
   }
 
   Future<void> updateDsr({
@@ -706,6 +978,7 @@ class SupabaseService {
     required double salary,
   }) async {
     if (name.trim().isEmpty) throw Exception('DSR name is required');
+    final companyId = await _activeCompanyId();
 
     await client.from('dsrs').update({
       'supplier_id': supplierId,
@@ -713,18 +986,21 @@ class SupabaseService {
       'phone': phone.trim(),
       'route': route.trim(),
       'salary': salary,
-    }).eq('id', id);
+    }).eq('id', id).eq('company_id', companyId);
   }
 
   Future<void> deleteDsr(String id) async {
+    final companyId = await _activeCompanyId();
     final linkedShops = await client
         .from('shopkeepers')
         .select('shop_name')
+        .eq('company_id', companyId)
         .eq('dsr_id', id);
 
     final linkedSales = await client
         .from('sales')
         .select('bill_no')
+        .eq('company_id', companyId)
         .eq('dsr_id', id)
         .limit(5);
 
@@ -750,7 +1026,7 @@ class SupabaseService {
       throw Exception('Cannot delete DSR because it has ${parts.join(' and ')}.');
     }
 
-    await client.from('dsrs').delete().eq('id', id);
+    await client.from('dsrs').delete().eq('id', id).eq('company_id', companyId);
   }
 
   Future<void> updateShopkeeper({
@@ -762,6 +1038,7 @@ class SupabaseService {
     required String area,
   }) async {
     if (shopName.trim().isEmpty) throw Exception('Shop name is required');
+    final companyId = await _activeCompanyId();
 
     await client.from('shopkeepers').update({
       'dsr_id': dsrId,
@@ -769,19 +1046,22 @@ class SupabaseService {
       'owner_name': ownerName.trim(),
       'phone': phone.trim(),
       'area': area.trim(),
-    }).eq('id', id);
+    }).eq('id', id).eq('company_id', companyId);
   }
 
   Future<void> deleteShopkeeper(String id) async {
+    final companyId = await _activeCompanyId();
     final linkedSales = await client
         .from('sales')
         .select('bill_no')
+        .eq('company_id', companyId)
         .eq('shopkeeper_id', id)
         .limit(5);
 
     final linkedRecoveries = await client
         .from('recoveries')
         .select('cheque_bill_no')
+        .eq('company_id', companyId)
         .eq('shopkeeper_id', id)
         .limit(5);
 
@@ -809,7 +1089,7 @@ class SupabaseService {
       );
     }
 
-    await client.from('shopkeepers').delete().eq('id', id);
+    await client.from('shopkeepers').delete().eq('id', id).eq('company_id', companyId);
   }
 
   Future<void> updateProduct({
@@ -833,6 +1113,7 @@ class SupabaseService {
     if (purchasePrice <= 0) throw Exception('Packet purchase price must be greater than 0');
     if (sellingPrice <= 0) throw Exception('Packet selling price must be greater than 0');
     if (packetsPerCarton <= 0) throw Exception('Packets per carton must be greater than 0');
+    final companyId = await _activeCompanyId();
 
     await client.from('products').update({
       'name': name.trim(),
@@ -849,25 +1130,29 @@ class SupabaseService {
       'packets_per_carton': packetsPerCarton,
       'company_discount': companyDiscount,
       'trade_discount': tradeDiscount,
-    }).eq('id', id);
+    }).eq('id', id).eq('company_id', companyId);
   }
 
   Future<void> deleteProduct(String id) async {
+    final companyId = await _activeCompanyId();
     final linkedSales = await client
         .from('sales')
         .select('bill_no')
+        .eq('company_id', companyId)
         .eq('product_id', id)
         .limit(5);
 
     final linkedLoads = await client
         .from('load_entries')
         .select('id')
+        .eq('company_id', companyId)
         .eq('product_id', id)
         .limit(5);
 
     final linkedStock = await client
         .from('dsr_stocks')
         .select('dsr_id, quantity')
+        .eq('company_id', companyId)
         .eq('product_id', id);
 
     if (linkedSales.isNotEmpty || linkedLoads.isNotEmpty || linkedStock.isNotEmpty) {
@@ -894,7 +1179,7 @@ class SupabaseService {
       );
     }
 
-    await client.from('products').delete().eq('id', id);
+    await client.from('products').delete().eq('id', id).eq('company_id', companyId);
   }
 
 
@@ -911,6 +1196,7 @@ class SupabaseService {
     final tables = [
       'cash_counts',
       'claims',
+      'investments',
       'deposits',
       'expenses',
       'recoveries',

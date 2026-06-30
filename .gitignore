@@ -11,6 +11,13 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+supabase.env.json
+build/
+.dart_tool/
+.packages
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
 
 # IntelliJ related
 *.iml
