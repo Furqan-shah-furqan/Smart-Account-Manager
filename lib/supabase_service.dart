@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_type_check
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models.dart';
 

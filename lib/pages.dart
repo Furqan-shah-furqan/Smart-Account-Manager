@@ -9684,6 +9684,7 @@ Widget salesTable(
                     enableGeneratedDetails && navContext != null;
 
                 void openDetails() {
+                  // ignore: unnecessary_null_comparison
                   if (!canOpenDetails || navContext == null) return;
                   Navigator.push(
                     navContext,
@@ -10506,6 +10507,7 @@ void _openLedgerPrintWindow(String documentHtml) {
   final url = html.Url.createObjectUrlFromBlob(blob);
   final openedWindow = html.window.open(url, '_blank');
 
+  // ignore: unnecessary_null_comparison
   if (openedWindow == null) {
     html.window.location.href = url;
   }
