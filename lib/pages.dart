@@ -91,8 +91,7 @@ class DashboardPage extends StatelessWidget {
                     openMetric(context, DashboardMetricType.balanceCash)),
             StatCard(
                 title: 'Market Credit',
-                value: state.rs(state.marketCredit +
-                    _manualMarketCreditTotalForCompany(state.profile?.companyId ?? '')),
+                value: state.rs(state.marketCredit),
                 icon: Icons.store_rounded,
                 color: Colors.orange,
                 onTap: () =>
@@ -325,12 +324,6 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
 
   AppState get state => widget.state;
 
-  List<_ManualMarketCreditEntry> get manualMarketCredits {
-    return _loadManualMarketCredits(state.profile?.companyId ?? '')
-        .where((item) => dateOk(item.date))
-        .toList();
-  }
-
   @override
   void dispose() {
     fromController.dispose();
@@ -534,9 +527,9 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
             .fold<double>(0, (sum, item) => sum + item.total);
         final recovery = filteredRecoveries()
             .fold<double>(0, (sum, item) => sum + item.receivedAmount);
-        final manualCredit = manualMarketCredits
-            .fold<double>(0, (sum, item) => sum + item.balanceEffect);
-        return creditSales + manualCredit - recovery;
+        return (creditSales - recovery)
+            .clamp(0, double.infinity)
+            .toDouble();
       case DashboardMetricType.stockValue:
         return state.stockValue;
       case DashboardMetricType.totalInvestment:
@@ -600,13 +593,7 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
 
     return Scaffold(
       backgroundColor: AppTheme.softBg,
-      floatingActionButton: widget.metric == DashboardMetricType.marketCredit
-          ? FloatingActionButton.extended(
-              onPressed: showManualMarketCreditDialog,
-              icon: const Icon(Icons.add_card_rounded),
-              label: const Text('Add Credit'),
-            )
-          : null,
+      floatingActionButton: null,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(pagePadding),
@@ -717,115 +704,6 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
     }
   }
 
-  void showManualMarketCreditDialog() {
-    if (state.dsrs.isEmpty) {
-      showSnack(context, 'Add DSR first.');
-      return;
-    }
-
-    String dsrId = state.dsrs.first.id;
-    String salesmanId = state.dsrById(dsrId)?.supplierId ?? '';
-    String entryType = _ManualMarketCreditEntry.typeCredit;
-    final shopController = TextEditingController();
-    final dateController = TextEditingController(text: _todayForManualCredit());
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-
-    statefulDialog(
-      context: context,
-      title: 'Add Shop / Distributor Ledger Entry',
-      builder: (setDialog) {
-        final salesmanName = state.supplierName(salesmanId);
-        return [
-          textInput(label: 'Shop Name', controller: shopController),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: dsrId,
-            decoration: const InputDecoration(labelText: 'DSR Name'),
-            items: state.dsrs
-                .map((dsr) => DropdownMenuItem(
-                      value: dsr.id,
-                      child: Text(dsr.name),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              setDialog(() {
-                dsrId = value ?? dsrId;
-                salesmanId = state.dsrById(dsrId)?.supplierId ?? '';
-              });
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            readOnly: true,
-            controller: TextEditingController(text: salesmanName),
-            decoration: const InputDecoration(labelText: 'Salesman'),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: entryType,
-            decoration: const InputDecoration(labelText: 'Entry Type'),
-            items: const [
-              DropdownMenuItem(
-                value: _ManualMarketCreditEntry.typeCredit,
-                child: Text('Credit / Debit to Shop'),
-              ),
-              DropdownMenuItem(
-                value: _ManualMarketCreditEntry.typePayment,
-                child: Text('Payment / Recovery from Shop'),
-              ),
-            ],
-            onChanged: (value) {
-              setDialog(() {
-                entryType = value ?? entryType;
-              });
-            },
-          ),
-          textInput(label: 'Date', controller: dateController),
-          textInput(
-            label: entryType == _ManualMarketCreditEntry.typePayment
-                ? 'Payment / Recovery Amount'
-                : 'Credit Amount',
-            controller: amountController,
-            number: true,
-          ),
-          textInput(label: 'Note', controller: noteController),
-        ];
-      },
-      onSave: () async {
-        final shopName = shopController.text.trim();
-        final amount = toDouble(amountController.text);
-
-        if (shopName.isEmpty) {
-          throw Exception('Shop name is required');
-        }
-        if (dsrId.isEmpty) {
-          throw Exception('DSR name is required');
-        }
-        if (amount <= 0) {
-          throw Exception('Amount must be greater than 0');
-        }
-
-        final entry = _ManualMarketCreditEntry(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
-          companyId: state.profile?.companyId ?? '',
-          shopName: shopName,
-          dsrId: dsrId,
-          salesmanId: salesmanId,
-          date: dateController.text.trim().isEmpty
-              ? _todayForManualCredit()
-              : dateController.text.trim(),
-          amount: amount,
-          note: noteController.text.trim(),
-          entryType: entryType,
-        );
-
-        _saveManualMarketCredit(entry);
-        setState(() {});
-      },
-    );
-  }
-
   Widget cashLedgerTable() {
     final rows = <_DashboardLedgerRow>[];
 
@@ -923,133 +801,32 @@ class _DashboardMetricPageState extends State<DashboardMetricPage> {
       ));
     }
 
-    for (final credit in manualMarketCredits) {
-      rows.add(_DashboardLedgerRow(
-        date: credit.date,
-        type: credit.isPayment ? 'Shop Payment' : 'Manual Credit',
-        party: state.dsrName(credit.dsrId),
-        detail:
-            'Shop: ${credit.shopName} • Salesman: ${state.supplierName(credit.salesmanId)}${credit.note.trim().isEmpty ? '' : ' • ${credit.note.trim()}'}',
-        amount: credit.balanceEffect,
-      ));
-    }
-
     rows.sort((a, b) => b.date.compareTo(a.date));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        shopDistributorLedgerSummary(),
-        const SizedBox(height: 18),
-        ledgerTable(
-          title: 'Market Credit Ledger',
-          headers: const [
-            'Date',
-            'Type',
-            'Booker / DSR',
-            'Detail',
-            'Credit Added',
-            'Paid',
-            'Balance Effect'
-          ],
-          rows: rows.map((row) {
-            final credit = row.amount >= 0;
-            return [
-              formatDateForUi(row.date),
-              row.type,
-              row.party,
-              row.detail,
-              credit ? state.rs(row.amount) : '-',
-              credit ? '-' : state.rs(row.amount.abs()),
-              state.rs(row.amount),
-            ];
-          }).toList(),
-        ),
+    return ledgerTable(
+      title: 'Market Credit Ledger',
+      headers: const [
+        'Date',
+        'Type',
+        'Booker / DSR',
+        'Detail',
+        'Credit Added',
+        'Paid',
+        'Balance Effect'
       ],
+      rows: rows.map((row) {
+        final credit = row.amount >= 0;
+        return [
+          formatDateForUi(row.date),
+          row.type,
+          row.party,
+          row.detail,
+          credit ? state.rs(row.amount) : '-',
+          credit ? '-' : state.rs(row.amount.abs()),
+          state.rs(row.amount),
+        ];
+      }).toList(),
     );
-  }
-
-  Widget shopDistributorLedgerSummary() {
-    final entries = manualMarketCredits;
-    if (entries.isEmpty) {
-      return DataCard(
-        title: 'Shop / Distributor Monthly Ledger',
-        child: emptyBox(
-            'No shop ledger entries yet. Tap Add Credit to create shop-wise credit or payment entries.'),
-      );
-    }
-
-    final shopNames = entries.map((entry) => entry.shopName).toSet().toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-    return DataCard(
-      title: 'Shop / Distributor Monthly Ledger',
-      child: horizontalTable(
-        DataTable(
-          columns: const [
-            DataColumn(label: Text('Shop Name')),
-            DataColumn(label: Text('DSR')),
-            DataColumn(label: Text('Salesman')),
-            DataColumn(label: Text('Invoice / Credit')),
-            DataColumn(label: Text('Payment / Recovery')),
-            DataColumn(label: Text('Balance')),
-            DataColumn(label: Text('Action')),
-          ],
-          rows: shopNames.map((shopName) {
-            final shopEntries = entries
-                .where((entry) => entry.shopName.toLowerCase() == shopName.toLowerCase())
-                .toList();
-            final first = shopEntries.first;
-            final creditTotal = shopEntries
-                .where((entry) => !entry.isPayment)
-                .fold<double>(0, (sum, entry) => sum + entry.amount);
-            final paymentTotal = shopEntries
-                .where((entry) => entry.isPayment)
-                .fold<double>(0, (sum, entry) => sum + entry.amount);
-            final balance = creditTotal - paymentTotal;
-
-            return DataRow(cells: [
-              DataCell(
-                InkWell(
-                  onTap: () => openShopLedger(shopName),
-                  child: Text(
-                    shopName,
-                    style: const TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-              DataCell(Text(state.dsrName(first.dsrId))),
-              DataCell(Text(state.supplierName(first.salesmanId))),
-              DataCell(Text(state.rs(creditTotal))),
-              DataCell(Text(state.rs(paymentTotal))),
-              DataCell(Text(state.rs(balance))),
-              DataCell(
-                OutlinedButton.icon(
-                  onPressed: () => openShopLedger(shopName),
-                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                  label: const Text('Open Ledger'),
-                ),
-              ),
-            ]);
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  void openShopLedger(String shopName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _ShopDistributorLedgerPage(
-          state: state,
-          shopName: shopName,
-        ),
-      ),
-    ).then((_) => setState(() {}));
   }
 
   Widget investmentHistoryTable() {
@@ -1300,631 +1077,6 @@ class _DashboardLedgerRow {
     required this.detail,
     required this.amount,
   });
-}
-
-class _ManualMarketCreditEntry {
-  static const String typeCredit = 'credit';
-  static const String typePayment = 'payment';
-
-  final String id;
-  final String companyId;
-  final String shopName;
-  final String dsrId;
-  final String salesmanId;
-  final String date;
-  final double amount;
-  final String note;
-  final String entryType;
-
-  const _ManualMarketCreditEntry({
-    required this.id,
-    required this.companyId,
-    required this.shopName,
-    required this.dsrId,
-    required this.salesmanId,
-    required this.date,
-    required this.amount,
-    required this.note,
-    this.entryType = typeCredit,
-  });
-
-  bool get isPayment => entryType == typePayment;
-  double get balanceEffect => isPayment ? -amount : amount;
-
-  String encode() {
-    return [
-      id,
-      companyId,
-      shopName,
-      dsrId,
-      salesmanId,
-      date,
-      amount.toString(),
-      note,
-      entryType,
-    ].map(Uri.encodeComponent).join('|');
-  }
-
-  static _ManualMarketCreditEntry? decode(String value) {
-    final parts = value.split('|').map(Uri.decodeComponent).toList();
-    if (parts.length < 8) return null;
-    return _ManualMarketCreditEntry(
-      id: parts[0],
-      companyId: parts[1],
-      shopName: parts[2],
-      dsrId: parts[3],
-      salesmanId: parts[4],
-      date: parts[5],
-      amount: double.tryParse(parts[6]) ?? 0,
-      note: parts[7],
-      entryType: parts.length > 8 ? parts[8] : typeCredit,
-    );
-  }
-}
-
-const String _manualMarketCreditStorageKey = 'manual_market_credit_entries_v1';
-
-List<_ManualMarketCreditEntry> _loadManualMarketCredits(String companyId) {
-  final raw = html.window.localStorage[_manualMarketCreditStorageKey] ?? '';
-  if (raw.trim().isEmpty) return [];
-
-  return raw
-      .split('\n')
-      .map(_ManualMarketCreditEntry.decode)
-      .whereType<_ManualMarketCreditEntry>()
-      .where((entry) => companyId.isEmpty || entry.companyId == companyId)
-      .toList();
-}
-
-void _saveManualMarketCredit(_ManualMarketCreditEntry entry) {
-  final all = _loadManualMarketCredits('')..add(entry);
-  html.window.localStorage[_manualMarketCreditStorageKey] =
-      all.map((item) => item.encode()).join('\n');
-}
-
-double _manualMarketCreditTotalForCompany(String companyId) {
-  return _loadManualMarketCredits(companyId)
-      .fold<double>(0, (sum, item) => sum + item.balanceEffect);
-}
-
-String _todayForManualCredit() {
-  final now = DateTime.now();
-  return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-}
-
-
-class _ShopDistributorLedgerPage extends StatefulWidget {
-  final AppState state;
-  final String shopName;
-
-  const _ShopDistributorLedgerPage({
-    required this.state,
-    required this.shopName,
-  });
-
-  @override
-  State<_ShopDistributorLedgerPage> createState() => _ShopDistributorLedgerPageState();
-}
-
-class _ShopDistributorLedgerPageState extends State<_ShopDistributorLedgerPage> {
-  final monthController = TextEditingController();
-  final yearController = TextEditingController();
-
-  AppState get state => widget.state;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    monthController.text = now.month.toString().padLeft(2, '0');
-    yearController.text = now.year.toString();
-  }
-
-  @override
-  void dispose() {
-    monthController.dispose();
-    yearController.dispose();
-    super.dispose();
-  }
-
-  List<_ManualMarketCreditEntry> get allShopEntries {
-    return _loadManualMarketCredits(state.profile?.companyId ?? '')
-        .where((entry) => entry.shopName.toLowerCase() == widget.shopName.toLowerCase())
-        .toList();
-  }
-
-  bool monthOk(String date) {
-    final parts = date.trim().split('-');
-    if (parts.length != 3) return true;
-    final month = monthController.text.trim().padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
-    final year = yearController.text.trim();
-    if (month.isNotEmpty && parts[1] != month) return false;
-    if (year.isNotEmpty && parts[0] != year) return false;
-    return true;
-  }
-
-  bool beforeSelectedMonth(String date) {
-    final month = monthController.text.trim().padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
-    final year = yearController.text.trim();
-    if (month.isEmpty || year.isEmpty) return false;
-    final parts = date.trim().split('-');
-    if (parts.length != 3) return false;
-    return '${parts[0]}-${parts[1]}'.compareTo('$year-$month') < 0;
-  }
-
-  List<_ManualMarketCreditEntry> get entries {
-    final rows = allShopEntries.where((entry) => monthOk(entry.date)).toList();
-    rows.sort((a, b) => a.date.compareTo(b.date));
-    return rows;
-  }
-
-  double get openingBalance {
-    return allShopEntries
-        .where((entry) => beforeSelectedMonth(entry.date))
-        .fold<double>(0, (sum, entry) => sum + entry.balanceEffect);
-  }
-
-  double get creditTotal {
-    return entries
-        .where((entry) => !entry.isPayment)
-        .fold<double>(0, (sum, entry) => sum + entry.amount);
-  }
-
-  double get paymentTotal {
-    return entries
-        .where((entry) => entry.isPayment)
-        .fold<double>(0, (sum, entry) => sum + entry.amount);
-  }
-
-  double get closingBalance => openingBalance + creditTotal - paymentTotal;
-
-  Widget filterInput(String label, TextEditingController controller, {double width = 120}) {
-    return SizedBox(
-      width: width,
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(labelText: label),
-        onChanged: (_) => setState(() {}),
-      ),
-    );
-  }
-
-  void addLedgerEntry() {
-    if (state.dsrs.isEmpty) {
-      showSnack(context, 'Add DSR first.');
-      return;
-    }
-
-    String dsrId = state.dsrs.first.id;
-    String salesmanId = state.dsrById(dsrId)?.supplierId ?? '';
-    String entryType = _ManualMarketCreditEntry.typeCredit;
-    final dateController = TextEditingController(text: _todayForManualCredit());
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-
-    statefulDialog(
-      context: context,
-      title: 'Add Ledger Entry for ${widget.shopName}',
-      builder: (setDialog) {
-        final salesmanName = state.supplierName(salesmanId);
-        return [
-          TextField(
-            readOnly: true,
-            controller: TextEditingController(text: widget.shopName),
-            decoration: const InputDecoration(labelText: 'Shop Name'),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: dsrId,
-            decoration: const InputDecoration(labelText: 'DSR Name'),
-            items: state.dsrs
-                .map((dsr) => DropdownMenuItem(value: dsr.id, child: Text(dsr.name)))
-                .toList(),
-            onChanged: (value) {
-              setDialog(() {
-                dsrId = value ?? dsrId;
-                salesmanId = state.dsrById(dsrId)?.supplierId ?? '';
-              });
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            readOnly: true,
-            controller: TextEditingController(text: salesmanName),
-            decoration: const InputDecoration(labelText: 'Salesman'),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: entryType,
-            decoration: const InputDecoration(labelText: 'Entry Type'),
-            items: const [
-              DropdownMenuItem(
-                value: _ManualMarketCreditEntry.typeCredit,
-                child: Text('Credit / Debit to Shop'),
-              ),
-              DropdownMenuItem(
-                value: _ManualMarketCreditEntry.typePayment,
-                child: Text('Payment / Recovery from Shop'),
-              ),
-            ],
-            onChanged: (value) => setDialog(() => entryType = value ?? entryType),
-          ),
-          textInput(label: 'Date', controller: dateController),
-          textInput(label: 'Amount', controller: amountController, number: true),
-          textInput(label: 'Note / Detail', controller: noteController),
-        ];
-      },
-      onSave: () async {
-        final amount = toDouble(amountController.text);
-        if (amount <= 0) throw Exception('Amount must be greater than 0');
-
-        _saveManualMarketCredit(_ManualMarketCreditEntry(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
-          companyId: state.profile?.companyId ?? '',
-          shopName: widget.shopName,
-          dsrId: dsrId,
-          salesmanId: salesmanId,
-          date: dateController.text.trim().isEmpty ? _todayForManualCredit() : dateController.text.trim(),
-          amount: amount,
-          note: noteController.text.trim(),
-          entryType: entryType,
-        ));
-        setState(() {});
-      },
-    );
-  }
-
-  List<_ShopReportLedgerRow> get reportRows {
-    final rows = <_ShopReportLedgerRow>[];
-    double balance = openingBalance;
-
-    rows.add(_ShopReportLedgerRow(
-      bok: '',
-      voucherNo: '',
-      date: '',
-      slipNo: '',
-      bank: '',
-      qty: '-',
-      description: 'Opening Balance',
-      debit: 0,
-      credit: 0,
-      balance: balance,
-    ));
-
-    var voucher = 1;
-    for (final entry in entries) {
-      if (entry.isPayment) {
-        balance -= entry.amount;
-        rows.add(_ShopReportLedgerRow(
-          bok: 'CR',
-          voucherNo: voucher.toString().padLeft(5, '0'),
-          date: formatDateForUi(entry.date),
-          slipNo: '-',
-          bank: entry.note.toLowerCase().contains('cash') ? 'CASH' : '-',
-          qty: '-',
-          description: entry.note.trim().isEmpty
-              ? 'Payment / Recovery from ${widget.shopName}'
-              : entry.note.trim(),
-          debit: 0,
-          credit: entry.amount,
-          balance: balance,
-        ));
-      } else {
-        balance += entry.amount;
-        rows.add(_ShopReportLedgerRow(
-          bok: 'SB',
-          voucherNo: voucher.toString().padLeft(5, '0'),
-          date: formatDateForUi(entry.date),
-          slipNo: '-',
-          bank: '-',
-          qty: '-',
-          description: entry.note.trim().isEmpty
-              ? 'Sales / Credit to ${widget.shopName}'
-              : entry.note.trim(),
-          debit: entry.amount,
-          credit: 0,
-          balance: balance,
-        ));
-      }
-      voucher++;
-    }
-
-    return rows;
-  }
-
-  String get reportFromText {
-    final month = monthController.text.trim().padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
-    final year = yearController.text.trim();
-    if (month.isEmpty || year.isEmpty) return 'All';
-    return '01/$month/$year';
-  }
-
-  String get reportToText {
-    final month = monthController.text.trim().padLeft(monthController.text.trim().isEmpty ? 0 : 2, '0');
-    final year = yearController.text.trim();
-    if (month.isEmpty || year.isEmpty) return 'All';
-    final monthInt = int.tryParse(month) ?? DateTime.now().month;
-    final yearInt = int.tryParse(year) ?? DateTime.now().year;
-    final lastDay = DateTime(yearInt, monthInt + 1, 0).day;
-    return '${lastDay.toString().padLeft(2, '0')}/$month/$year';
-  }
-
-
-  void printShopLedgerOnly() {
-    final today = DateTime.now();
-    final printed = '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}';
-    final rowsHtml = StringBuffer();
-
-    for (final row in reportRows) {
-      rowsHtml.write("""
-        <tr>
-          <td>${_ledgerHtmlEscape(row.bok)}</td>
-          <td>${_ledgerHtmlEscape(row.voucherNo)}</td>
-          <td>${_ledgerHtmlEscape(row.date)}</td>
-          <td>${_ledgerHtmlEscape(row.slipNo)}</td>
-          <td>${_ledgerHtmlEscape(row.bank)}</td>
-          <td class="num">${_ledgerHtmlEscape(row.qty)}</td>
-          <td class="desc">${_ledgerHtmlEscape(row.description)}</td>
-          <td class="money">${row.debit == 0 ? '0' : _ledgerPrintMoney(row.debit)}</td>
-          <td class="money">${row.credit == 0 ? '0' : _ledgerPrintMoney(row.credit)}</td>
-          <td class="money">${_ledgerPrintBalance(row.balance)}</td>
-        </tr>
-      """);
-    }
-
-    rowsHtml.write("""
-      <tr class="cf-row">
-        <td></td><td></td><td></td><td></td><td></td><td></td>
-        <td>C/F Balance</td>
-        <td class="money">${_ledgerPrintMoney(creditTotal)}</td>
-        <td class="money">${_ledgerPrintMoney(paymentTotal)}</td>
-        <td class="money">${_ledgerPrintBalance(closingBalance)}</td>
-      </tr>
-    """);
-
-    _openLedgerPrintWindow(_ledgerPrintDocument(
-      title: 'General Ledger Report',
-      fromText: reportFromText,
-      toText: reportToText,
-      accountCode: widget.shopName.hashCode.abs().toString().padLeft(6, '0').substring(0, 6),
-      accountName: widget.shopName.toUpperCase(),
-      printedDate: printed,
-      extraInfo: 'DSR: ${entries.isEmpty ? '-' : state.dsrName(entries.first.dsrId)} &nbsp;&nbsp; | &nbsp;&nbsp; Salesman: ${entries.isEmpty ? '-' : state.supplierName(entries.first.salesmanId)}',
-      rowsHtml: rowsHtml.toString(),
-    ));
-  }
-
-  Widget ledgerReportPaper() {
-    final rows = reportRows;
-    final today = DateTime.now();
-    final printed = '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xffd1d5db)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'General Ledger Report',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xff7f1d1d),
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              decoration: TextDecoration.underline,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'From: $reportFromText  To: $reportToText',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xff111827),
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: Colors.black, width: 1.4),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('A/C Code:   ${widget.shopName.hashCode.abs().toString().padLeft(6, '0').substring(0, 6)}',
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                      const SizedBox(height: 12),
-                      Text('A/C Name:   ${widget.shopName.toUpperCase()}',
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                      const SizedBox(height: 12),
-                      Text('DSR: ${entries.isEmpty ? '-' : state.dsrName(entries.first.dsrId)}   |   Salesman: ${entries.isEmpty ? '-' : state.supplierName(entries.first.salesmanId)}',
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 18),
-              Text(printed, style: const TextStyle(color: Color(0xff7f1d1d), fontWeight: FontWeight.w900)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          horizontalTable(
-            DataTable(
-              border: TableBorder.all(color: Colors.black87, width: 1),
-              headingRowHeight: 36,
-              dataRowMinHeight: 36,
-              dataRowMaxHeight: 48,
-              columnSpacing: 10,
-              horizontalMargin: 8,
-              columns: const [
-                DataColumn(label: Text('BOK')),
-                DataColumn(label: Text('V.No.')),
-                DataColumn(label: Text('DATE')),
-                DataColumn(label: Text('SLIP/CHQ #')),
-                DataColumn(label: Text('BANK')),
-                DataColumn(label: Text('QTY.')),
-                DataColumn(label: Text('DESCRIPTION')),
-                DataColumn(label: Text('DEBIT')),
-                DataColumn(label: Text('CREDIT')),
-                DataColumn(label: Text('BALANCE')),
-              ],
-              rows: [
-                ...rows.map((row) => DataRow(cells: [
-                      DataCell(Text(row.bok)),
-                      DataCell(Text(row.voucherNo)),
-                      DataCell(Text(row.date)),
-                      DataCell(Text(row.slipNo)),
-                      DataCell(Text(row.bank)),
-                      DataCell(Text(row.qty)),
-                      DataCell(SizedBox(width: 260, child: Text(row.description, overflow: TextOverflow.ellipsis))),
-                      DataCell(Text(row.debit == 0 ? '0' : state.rs(row.debit))),
-                      DataCell(Text(row.credit == 0 ? '0' : state.rs(row.credit))),
-                      DataCell(Text('${state.rs(row.balance)} Dr')),
-                    ])),
-                DataRow(cells: [
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('C/F Balance', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xff7f1d1d)))),
-                  DataCell(Text(state.rs(creditTotal), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xff7f1d1d)))),
-                  DataCell(Text(state.rs(paymentTotal), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xff7f1d1d)))),
-                  DataCell(Text('${state.rs(closingBalance)} Dr', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xff7f1d1d)))),
-                ]),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.softBg,
-      appBar: AppBar(
-        title: Text('${widget.shopName} Ledger'),
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: OutlinedButton.icon(
-              onPressed: printShopLedgerOnly,
-              icon: const Icon(Icons.print_rounded),
-              label: const Text('Print'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: OutlinedButton.icon(
-              onPressed: addLedgerEntry,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Add Entry'),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: addLedgerEntry,
-        icon: const Icon(Icons.add_card_rounded),
-        label: const Text('Add Entry'),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DataCard(
-                title: 'Ledger Filters',
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 360,
-                      child: Text(
-                        'This is the monthly ledger between ${widget.shopName} and ${state.company?.name ?? 'Distributor'}.',
-                        style: const TextStyle(color: Color(0xff6b7280), height: 1.5),
-                      ),
-                    ),
-                    filterInput('Month', monthController, width: 110),
-                    filterInput('Year', yearController, width: 120),
-                    clearFilterButton(() {
-                      setState(() {
-                        monthController.clear();
-                        yearController.clear();
-                      });
-                    }),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: [
-                  StatCard(title: 'Opening Balance', value: '${state.rs(openingBalance)} Dr', icon: Icons.history_rounded, color: Colors.blueGrey),
-                  StatCard(title: 'Debit / Credit', value: state.rs(creditTotal), icon: Icons.receipt_long_rounded, color: Colors.orange),
-                  StatCard(title: 'Payment / Recovery', value: state.rs(paymentTotal), icon: Icons.payments_rounded, color: Colors.green),
-                  StatCard(title: 'Closing Balance', value: '${state.rs(closingBalance)} Dr', icon: Icons.account_balance_rounded, color: Colors.red),
-                ],
-              ),
-              const SizedBox(height: 18),
-              ledgerReportPaper(),
-              const SizedBox(height: 90),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShopReportLedgerRow {
-  final String bok;
-  final String voucherNo;
-  final String date;
-  final String slipNo;
-  final String bank;
-  final String qty;
-  final String description;
-  final double debit;
-  final double credit;
-  final double balance;
-
-  const _ShopReportLedgerRow({
-    required this.bok,
-    required this.voucherNo,
-    required this.date,
-    required this.slipNo,
-    required this.bank,
-    required this.qty,
-    required this.description,
-    required this.debit,
-    required this.credit,
-    required this.balance,
-  });
-
 }
 
 class SetupCompanyPage extends StatelessWidget {
@@ -2242,11 +1394,13 @@ class _ProductPageState extends State<ProductPage> {
       totalBoxesFor(row) * toDouble(row.packetBuyController.text);
 
   double discountFor(_PrimarySkuDraftRow row) {
-    final company =
+    final companyPercent =
         toDouble(row.companyDiscountController.text).clamp(0, 100).toDouble();
-    final trade =
-        toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
-    return grossFor(row) * ((company + trade) / 100);
+    final tradeOfferPerBox =
+        toDouble(row.tradeOfferController.text).clamp(0, double.infinity).toDouble();
+    final companyDiscount = grossFor(row) * (companyPercent / 100);
+    final tradeOfferAmount = totalBoxesFor(row) * tradeOfferPerBox;
+    return companyDiscount + tradeOfferAmount;
   }
 
   double netFor(_PrimarySkuDraftRow row) =>
@@ -2328,8 +1482,8 @@ class _ProductPageState extends State<ProductPage> {
       final selling = toDouble(row.packetSellController.text);
       final companyPct =
           toDouble(row.companyDiscountController.text).clamp(0, 100).toDouble();
-      final tradePct =
-          toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
+      final tradeOfferPerBox =
+          toDouble(row.tradeOfferController.text).clamp(0, double.infinity).toDouble();
 
       if (name.isEmpty) {
         showSnack(context, 'Product/SKU name is required.');
@@ -2359,9 +1513,14 @@ class _ProductPageState extends State<ProductPage> {
         showSnack(context, 'Selling price must be greater than 0 for $name.');
         return;
       }
-      if (companyPct + tradePct > 100) {
+      if (companyPct > 100) {
         showSnack(context,
-            'Company discount and trade offer cannot exceed 100% for $name.');
+            'Company discount cannot exceed 100% for $name.');
+        return;
+      }
+      if (tradeOfferPerBox < 0) {
+        showSnack(context,
+            'Trade offer per box cannot be negative for $name.');
         return;
       }
 
@@ -2375,7 +1534,7 @@ class _ProductPageState extends State<ProductPage> {
         'purchase_price': purchase,
         'selling_price': selling,
         'company_discount_percent': companyPct,
-        'trade_offer_percent': tradePct,
+        'trade_offer_per_box': tradeOfferPerBox,
       });
     }
 
@@ -2642,7 +1801,7 @@ class _ProductPageState extends State<ProductPage> {
       'Purchase / Box',
       'Selling / Box',
       'Company %',
-      'Trade Offer %',
+      'Trade Offer / Box',
       'Gross',
       'Discount',
       'Net Total',
@@ -3662,16 +2821,24 @@ class _LoadFormPageState extends State<LoadFormPage> {
     return _returnUnitsFor(row) * toDouble(row.packetSellController.text);
   }
 
-  double _percentageFor(_SecondarySkuDraftRow row) {
-    final companyPercent =
-        toDouble(row.companyPercentController.text).clamp(0, 100).toDouble();
-    final tradePercent =
-        toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
-    return (companyPercent + tradePercent).clamp(0, 100).toDouble();
+  double _companyPercentFor(_SecondarySkuDraftRow row) {
+    return toDouble(row.companyPercentController.text)
+        .clamp(0, 100)
+        .toDouble();
+  }
+
+  double _tradeOfferPerBoxFor(_SecondarySkuDraftRow row) {
+    return toDouble(row.tradeOfferController.text)
+        .clamp(0, double.infinity)
+        .toDouble();
   }
 
   double _discountAmountFor(_SecondarySkuDraftRow row) {
-    return _loadTotalFor(row) * (_percentageFor(row) / 100);
+    final companyDiscount =
+        _loadTotalFor(row) * (_companyPercentFor(row) / 100);
+    final tradeOfferAmount =
+        _loadUnitsFor(row) * _tradeOfferPerBoxFor(row);
+    return companyDiscount + tradeOfferAmount;
   }
 
   double _netTotalFor(_SecondarySkuDraftRow row) {
@@ -3749,8 +2916,8 @@ class _LoadFormPageState extends State<LoadFormPage> {
       final price = toDouble(row.packetSellController.text);
       final companyPercent =
           toDouble(row.companyPercentController.text).clamp(0, 100).toDouble();
-      final tradePercent =
-          toDouble(row.tradeOfferController.text).clamp(0, 100).toDouble();
+      final tradeOfferPerBox =
+          toDouble(row.tradeOfferController.text).clamp(0, double.infinity).toDouble();
 
       if (loadBoxes <= 0 && returnBoxes <= 0) {
         showSnack(context, 'Enter a valid load or return quantity.');
@@ -3765,9 +2932,12 @@ class _LoadFormPageState extends State<LoadFormPage> {
         showSnack(context, 'Selling price must be greater than 0.');
         return;
       }
-      if (companyPercent + tradePercent > 100) {
-        showSnack(context,
-            'Company discount and trade offer cannot exceed 100%.');
+      if (companyPercent > 100) {
+        showSnack(context, 'Company discount cannot exceed 100%.');
+        return;
+      }
+      if (tradeOfferPerBox < 0) {
+        showSnack(context, 'Trade offer per box cannot be negative.');
         return;
       }
     }
@@ -3790,9 +2960,9 @@ class _LoadFormPageState extends State<LoadFormPage> {
                     row.companyPercentController.text)
                 .clamp(0, 100)
                 .toDouble(),
-            'trade_offer_percent':
+            'trade_offer_per_box':
                 toDouble(row.tradeOfferController.text)
-                    .clamp(0, 100)
+                    .clamp(0, double.infinity)
                     .toDouble(),
           };
         }).toList();
@@ -4115,7 +3285,7 @@ class _LoadFormPageState extends State<LoadFormPage> {
       'Distributor\nBox',
       'Price',
       'Company\n%',
-      'Trade\nOffer',
+      'Trade Offer\n/ Box',
       'Net Total',
       'Status',
     ];
@@ -4168,7 +3338,7 @@ class _LoadFormPageState extends State<LoadFormPage> {
         _textInputCell(widths[12], row.companyPercentController,
             hint: '0%', number: true, align: TextAlign.center),
         _textInputCell(widths[13], row.tradeOfferController,
-            hint: '0%', number: true, align: TextAlign.center),
+            hint: '0', number: true, align: TextAlign.center),
         _cell(widths[14], state.rs(netTotal), align: TextAlign.right),
         _cell(widths[15], status, align: TextAlign.center),
       ],
@@ -5181,7 +4351,18 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
-                      onPressed: printCurrentPage,
+                      onPressed: () {
+                        final printable = printableKey.currentState;
+                        if (printable == null) {
+                          showSnack(
+                            context,
+                            'Print preview is still loading. Please try again.',
+                            type: AppToastType.info,
+                          );
+                          return;
+                        }
+                        printable.printPreviewDocument();
+                      },
                       icon: const Icon(Icons.print_rounded, size: 18),
                       label: const Text('Print'),
                     ),
@@ -5491,7 +4672,6 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
     );
   }
 
-  // ignore: unused_element
   Widget _searchSuggestionList() {
     final suggestions = searchSuggestions;
     if (searchController.text.trim().isEmpty || suggestions.isEmpty) {
@@ -5900,7 +5080,9 @@ class _LoadFormSettlementPrintableState
     final creditTotal =
         widget.creditBills.fold(0.0, (sum, item) => sum + item.total);
 
-    grossSaleController = _moneyController(widget.grossSale);
+    grossSaleController = _moneyController(
+      math.max(widget.grossSale, widget.loadAmount),
+    );
     loadAmountController = _moneyController(widget.loadAmount);
     returnStockController = _moneyController(0);
     extraAmountController = _moneyController(0);
@@ -6023,6 +5205,173 @@ class _LoadFormSettlementPrintableState
     return recoveryRows.fold(0.0, (sum, row) => sum + toDouble(row.received.text));
   }
 
+  void printPreviewDocument() {
+    final productRowsHtml = skuRows.map((row) {
+      return '''
+        <tr>
+          <td>${_ledgerHtmlEscape(row.sr.text)}</td>
+          <td>${_ledgerHtmlEscape(row.sku.text)}</td>
+          <td>${_ledgerHtmlEscape(row.skuCode.text)}</td>
+          <td class="num">${_ledgerHtmlEscape(row.ctn.text)}</td>
+          <td class="num">${_ledgerHtmlEscape(row.box.text)}</td>
+          <td class="num">${_ledgerHtmlEscape(row.totalBox.text)}</td>
+          <td class="money">${_ledgerHtmlEscape(row.rate.text)}</td>
+          <td class="money">${_ledgerHtmlEscape(row.amount.text)}</td>
+        </tr>
+      ''';
+    }).join();
+
+    final cashRowsHtml = [5000, 1000, 500, 100, 50, 20, 10].map((note) {
+      final count = toInt(noteCountControllers[note]?.text ?? '0');
+      return '''
+        <tr>
+          <td>${_ledgerHtmlEscape(note)}</td>
+          <td class="num">${_ledgerHtmlEscape(count)}</td>
+          <td class="money">${_ledgerPrintMoney((note * count).toDouble())}</td>
+        </tr>
+      ''';
+    }).join();
+
+    final creditSection = creditRows.isEmpty
+        ? ''
+        : '''
+          <h3>Credit Bills</h3>
+          <table>
+            <thead><tr><th>Bill No</th><th>Date</th><th>DSR</th><th>Amount</th><th>Notes</th></tr></thead>
+            <tbody>
+              ${creditRows.map((row) => '''
+                <tr>
+                  <td>${_ledgerHtmlEscape(row.billNo.text)}</td>
+                  <td>${_ledgerHtmlEscape(row.date.text)}</td>
+                  <td>${_ledgerHtmlEscape(row.dsr.text)}</td>
+                  <td class="money">${_ledgerHtmlEscape(row.amount.text)}</td>
+                  <td>${_ledgerHtmlEscape(row.note.text)}</td>
+                </tr>
+              ''').join()}
+              <tr class="total"><td colspan="3">Total Credit</td><td class="money">${_ledgerPrintMoney(creditTotal)}</td><td></td></tr>
+            </tbody>
+          </table>
+        ''';
+
+    final recoverySection = recoveryRows.isEmpty
+        ? ''
+        : '''
+          <h3>Recovery Bills</h3>
+          <table>
+            <thead><tr><th>Cheque/Bill No</th><th>Date</th><th>DSR</th><th>Received</th><th>Balance</th><th>Notes</th></tr></thead>
+            <tbody>
+              ${recoveryRows.map((row) => '''
+                <tr>
+                  <td>${_ledgerHtmlEscape(row.billNo.text)}</td>
+                  <td>${_ledgerHtmlEscape(row.date.text)}</td>
+                  <td>${_ledgerHtmlEscape(row.dsr.text)}</td>
+                  <td class="money">${_ledgerHtmlEscape(row.received.text)}</td>
+                  <td class="money">${_ledgerHtmlEscape(row.balance.text)}</td>
+                  <td>${_ledgerHtmlEscape(row.note.text)}</td>
+                </tr>
+              ''').join()}
+              <tr class="total"><td colspan="3">Total Recovery</td><td class="money">${_ledgerPrintMoney(recoveryTotal)}</td><td colspan="2"></td></tr>
+            </tbody>
+          </table>
+        ''';
+
+    final printedAt = DateTime.now();
+    final printedText =
+        '${printedAt.day.toString().padLeft(2, '0')}/${printedAt.month.toString().padLeft(2, '0')}/${printedAt.year}';
+
+    final document = '''
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Load Form Settlement</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; color: #111827; background: white; }
+    .page { width: 100%; margin: 0 auto; }
+    .header { border: 1px solid #111; padding: 10px; text-align: center; margin-bottom: 10px; }
+    .header h1 { margin: 0 0 5px; font-size: 22px; }
+    .header p { margin: 3px 0; font-size: 12px; font-weight: 700; }
+    .notes { border: 1px solid #555; min-height: 34px; padding: 8px; margin-bottom: 10px; font-size: 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    h3 { margin: 10px 0 5px; padding: 6px; border: 1px solid #111; text-align: center; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 11px; }
+    th, td { border: 1px solid #555; padding: 6px; vertical-align: middle; }
+    th { background: #f3f4f6; font-weight: 800; }
+    .num, .money { text-align: right; white-space: nowrap; }
+    .total td { font-weight: 900; background: #f8fafc; }
+    .status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+    .status div { border: 1px solid #555; padding: 8px; text-align: center; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <h1>${_ledgerHtmlEscape(widget.distributorName)}</h1>
+      <p>Load Form Settlement</p>
+      <p>DSR: ${_ledgerHtmlEscape(widget.dsrName)} &nbsp; | &nbsp; Salesman: ${_ledgerHtmlEscape(widget.salesmanName)} &nbsp; | &nbsp; Date: ${_ledgerHtmlEscape(formatDateForUi(widget.date))}</p>
+      <p>Printed: ${_ledgerHtmlEscape(printedText)}</p>
+    </div>
+
+    <div class="notes"><strong>Notes:</strong> ${_ledgerHtmlEscape(notesController.text.trim().isEmpty ? '-' : notesController.text.trim())}</div>
+
+    <div class="grid">
+      <div>
+        <h3>Gross Sale / Cash Calculation</h3>
+        <table><tbody>
+          <tr><td>Gross Sale</td><td class="money">${_ledgerPrintMoney(grossSaleValue)}</td></tr>
+          <tr><td>Load Amount</td><td class="money">${_ledgerPrintMoney(loadAmountValue)}</td></tr>
+          <tr><td>Return Stock Amount</td><td class="money">${_ledgerPrintMoney(returnStockValue)}</td></tr>
+          <tr><td>Extra Amount</td><td class="money">${_ledgerPrintMoney(extraAmountValue)}</td></tr>
+          <tr><td>Net Sale</td><td class="money">${_ledgerPrintMoney(netSaleValue)}</td></tr>
+          <tr><td>Less Credit</td><td class="money">${_ledgerPrintMoney(lessCreditValue)}</td></tr>
+          <tr><td>Net Cash Sale</td><td class="money">${_ledgerPrintMoney(netCashSaleValue)}</td></tr>
+          <tr><td>Plus Recovery</td><td class="money">${_ledgerPrintMoney(plusRecoveryValue)}</td></tr>
+          <tr class="total"><td>Total DSR Cash</td><td class="money">${_ledgerPrintMoney(totalDsrCashValue)}</td></tr>
+        </tbody></table>
+      </div>
+      <div>
+        <h3>${_ledgerHtmlEscape(widget.distributorName)} Cash</h3>
+        <table>
+          <thead><tr><th>Note</th><th>Count</th><th>Amount</th></tr></thead>
+          <tbody>
+            $cashRowsHtml
+            <tr><td>Coins</td><td></td><td class="money">${_ledgerPrintMoney(toDouble(manualCashControllers['Coins']?.text ?? '0'))}</td></tr>
+            <tr><td>Short</td><td></td><td class="money">${_ledgerPrintMoney(shortAmount)}</td></tr>
+            <tr><td>Excess</td><td></td><td class="money">${_ledgerPrintMoney(excessAmount)}</td></tr>
+            <tr class="total"><td colspan="2">Total Physical Cash</td><td class="money">${_ledgerPrintMoney(cashNoteTotal)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3>Detail of Loaded SKUs From Secondary Order</h3>
+    <table>
+      <thead><tr><th>S#</th><th>SKU</th><th>SKU Code</th><th>CTN</th><th>Box</th><th>Total Box</th><th>Rate</th><th>Amount</th></tr></thead>
+      <tbody>
+        $productRowsHtml
+        <tr class="total"><td colspan="7">Total Amount</td><td class="money">${_ledgerPrintMoney(skuAmountTotal)}</td></tr>
+      </tbody>
+    </table>
+
+    $creditSection
+    $recoverySection
+
+    <div class="status">
+      <div>Total DSR Cash<br>${_ledgerPrintMoney(totalDsrCashValue)}</div>
+      <div>Physical Cash<br>${_ledgerPrintMoney(cashNoteTotal)}</div>
+      <div>Short<br>${_ledgerPrintMoney(shortAmount)}</div>
+      <div>Excess<br>${_ledgerPrintMoney(excessAmount)}</div>
+    </div>
+  </div>
+  <script>window.onload = function () { setTimeout(function () { window.print(); }, 350); };</script>
+</body>
+</html>
+    ''';
+
+    _openLedgerPrintWindow(document);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -6484,6 +5833,20 @@ class _OrderBookingPageState extends State<OrderBookingPage> {
           buttonText: 'Book Order',
           icon: Icons.point_of_sale_rounded,
           onTap: () => showSaleDialog(context, state, widget.onChanged),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            onPressed: () => showSaleDialog(
+              context,
+              state,
+              widget.onChanged,
+              initialType: SaleType.credit,
+            ),
+            icon: const Icon(Icons.credit_score_rounded),
+            label: const Text('Book Credit Sale'),
+          ),
         ),
         const SizedBox(height: 18),
         filterCard(
@@ -7259,6 +6622,14 @@ class _InvestmentPageState extends State<InvestmentPage> {
                 icon: Icons.request_quote_rounded,
                 color: Colors.orange),
           ],
+        ),
+        const SizedBox(height: 12),
+        DataCard(
+          title: 'Investment Calculation',
+          child: Text(
+            'Total Investment includes only saved investment records. Total Capital Value = Total Investment + Net Profit/Loss. Credit sales and recoveries are tracked separately and do not change investment.',
+            style: const TextStyle(color: Color(0xff6b7280), height: 1.5),
+          ),
         ),
         const SizedBox(height: 18),
         filterCard(
@@ -10029,7 +9400,6 @@ Widget salesTable(
                     enableGeneratedDetails && navContext != null;
 
                 void openDetails() {
-                  // ignore: unnecessary_null_comparison
                   if (!canOpenDetails || navContext == null) return;
                   Navigator.push(
                     navContext,
@@ -10608,9 +9978,10 @@ double effectiveLoadReturnAmount(AppState state, LoadEntry load) {
 
 double effectiveLoadDiscount(AppState state, LoadEntry load) {
   if (load.discountAmount > 0) return load.discountAmount;
-  final percent = load.companyDiscountPercent + load.tradeOfferPercent;
-  if (percent <= 0) return 0;
-  return effectiveLoadGross(state, load) * percent / 100;
+  final companyDiscount =
+      effectiveLoadGross(state, load) * load.companyDiscountPercent / 100;
+  final tradeOfferAmount = load.quantity * load.tradeOfferPercent;
+  return companyDiscount + tradeOfferAmount;
 }
 
 double effectiveLoadNet(AppState state, LoadEntry load) {
@@ -10852,7 +10223,6 @@ void _openLedgerPrintWindow(String documentHtml) {
   final url = html.Url.createObjectUrlFromBlob(blob);
   final openedWindow = html.window.open(url, '_blank');
 
-  // ignore: unnecessary_null_comparison
   if (openedWindow == null) {
     html.window.location.href = url;
   }
@@ -11137,7 +10507,7 @@ void showProductDialog(
           controller: companyDiscountController,
           number: true),
       textInput(
-          label: 'Trade Discount',
+          label: 'Trade Offer / Box',
           controller: tradeDiscountController,
           number: true),
     ],
@@ -11850,7 +11220,11 @@ void showLoadDialog(
 }
 
 void showSaleDialog(
-    BuildContext context, AppState state, Future<void> Function() onChanged) {
+  BuildContext context,
+  AppState state,
+  Future<void> Function() onChanged, {
+  SaleType initialType = SaleType.cash,
+}) {
   if (state.dsrs.isEmpty || state.products.isEmpty) {
     showSnack(context, 'Add DSR and product first.');
     return;
@@ -11858,7 +11232,7 @@ void showSaleDialog(
 
   String dsrId = state.dsrs.first.id;
   String productId = state.products.first.id;
-  SaleType saleType = SaleType.cash;
+  SaleType saleType = initialType;
 
   final qtyController = TextEditingController();
   final priceController = TextEditingController(
@@ -11869,7 +11243,9 @@ void showSaleDialog(
 
   statefulDialog(
     context: context,
-    title: 'Book Order / Sale',
+    title: initialType == SaleType.credit
+        ? 'Book Credit Sale'
+        : 'Book Order / Sale',
     builder: (setDialog) {
       return [
         textInput(label: 'Bill No', controller: billController),
@@ -11946,7 +11322,31 @@ void showRecoveryDialog(
     return;
   }
 
-  String dsrId = state.dsrs.first.id;
+  double pendingFor(String dsrId) {
+    final credit = state.sales
+        .where((sale) =>
+            sale.dsrId == dsrId && sale.type == SaleType.credit)
+        .fold<double>(0, (sum, sale) => sum + sale.total);
+    final recovered = state.recoveries
+        .where((item) => item.dsrId == dsrId)
+        .fold<double>(0, (sum, item) => sum + item.receivedAmount);
+    return (credit - recovered).clamp(0, double.infinity).toDouble();
+  }
+
+  final eligibleDsrs = state.dsrs
+      .where((dsr) => pendingFor(dsr.id) > 0)
+      .toList();
+
+  if (eligibleDsrs.isEmpty) {
+    showSnack(
+      context,
+      'No pending credit is available for recovery. Book a Credit Sale first.',
+      type: AppToastType.info,
+    );
+    return;
+  }
+
+  String dsrId = eligibleDsrs.first.id;
 
   final amountController = TextEditingController();
   final billController = TextEditingController(
@@ -11957,17 +11357,36 @@ void showRecoveryDialog(
     context: context,
     title: 'Add Recovery',
     builder: (setDialog) {
+      final pending = pendingFor(dsrId);
       return [
         DropdownButtonFormField<String>(
           value: dsrId,
+          isExpanded: true,
           decoration: const InputDecoration(labelText: 'Booker / DSR'),
-          items: state.dsrs
+          items: eligibleDsrs
               .map((x) => DropdownMenuItem(
                     value: x.id,
-                    child: Text('${x.name} - Salesman: ${state.supplierName(x.supplierId)}'),
+                    child: Text(
+                      '${x.name} - Pending: ${state.rs(pendingFor(x.id))}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ))
               .toList(),
           onChanged: (value) => setDialog(() => dsrId = value ?? dsrId),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            'Pending Credit: ${state.rs(pending)}',
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
         ),
         textInput(label: 'Cheque / Bill No', controller: billController),
         textInput(
@@ -11977,13 +11396,33 @@ void showRecoveryDialog(
       ];
     },
     onSave: () async {
+      final amount = toDouble(amountController.text);
+      final pending = pendingFor(dsrId);
+
+      if (amount <= 0) {
+        showSnack(
+          context,
+          'Enter a recovery amount greater than zero.',
+          type: AppToastType.error,
+        );
+        return;
+      }
+      if (amount > pending) {
+        showSnack(
+          context,
+          'Recovery cannot be greater than the pending credit of ${state.rs(pending)}.',
+          type: AppToastType.error,
+        );
+        return;
+      }
+
       await runAction(
         context,
         () => state.service.addRecovery(
           companyId: state.companyId,
           chequeBillNo: billController.text.trim(),
           dsrId: dsrId,
-          amount: toDouble(amountController.text),
+          amount: amount,
         ),
         onChanged,
       );

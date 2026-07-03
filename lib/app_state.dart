@@ -216,8 +216,12 @@ class AppState {
   double get marketCredit =>
       (creditSales - totalRecovery).clamp(0, double.infinity).toDouble();
 
-  double get totalInvestment =>
+  double get recordedInvestment =>
       investments.fold(0, (sum, item) => sum + item.amount);
+
+  // Investment contains only money intentionally added as capital.
+  // Credit sales and recoveries are tracked separately through Market Credit.
+  double get totalInvestment => recordedInvestment;
 
   double get cashInvestment => investments
       .where((item) => item.isCash)
