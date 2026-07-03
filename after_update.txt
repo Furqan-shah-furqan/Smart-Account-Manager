@@ -1,0 +1,12 @@
+cd /d "E:\SAAS APP\smart_account_manager_supabase"
+
+flutter analyze
+
+git status
+git pull --rebase origin main
+git add .
+git status
+git commit -m "Describe your update here"
+git push origin main 
+
+update commands for smart account manager
