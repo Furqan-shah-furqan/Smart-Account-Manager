@@ -5491,6 +5491,7 @@ class _LoadFormSettlementPageState extends State<LoadFormSettlementPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _searchSuggestionList() {
     final suggestions = searchSuggestions;
     if (searchController.text.trim().isEmpty || suggestions.isEmpty) {
@@ -7229,6 +7230,20 @@ class _InvestmentPageState extends State<InvestmentPage> {
                 icon: Icons.account_balance_rounded,
                 color: Colors.indigo),
             StatCard(
+                title: state.netProfit >= 0 ? 'Total Profit' : 'Total Loss',
+                value: state.rs(state.netProfit.abs()),
+                icon: state.netProfit >= 0
+                    ? Icons.trending_up_rounded
+                    : Icons.trending_down_rounded,
+                color: state.netProfit >= 0 ? Colors.green : Colors.red),
+            StatCard(
+                title: 'Total Capital Value',
+                value: state.rs(state.totalCapitalValue),
+                icon: Icons.paid_rounded,
+                color: state.totalCapitalValue >= 0
+                    ? Colors.teal
+                    : Colors.red),
+            StatCard(
                 title: 'Cash Investment',
                 value: state.rs(state.cashInvestment),
                 icon: Icons.payments_rounded,
@@ -7355,6 +7370,343 @@ class _InvestmentPageState extends State<InvestmentPage> {
                   ),
                 ),
         ),
+      ],
+    );
+  }
+}
+
+class _ProductProfitRow {
+  final String productId;
+  final int quantity;
+  final double sales;
+  final double cost;
+  final double profit;
+
+  const _ProductProfitRow({
+    required this.productId,
+    required this.quantity,
+    required this.sales,
+    required this.cost,
+    required this.profit,
+  });
+
+  double get marginPercent => sales <= 0 ? 0 : (profit / sales) * 100;
+}
+
+class ProfitLossPage extends StatefulWidget {
+  final AppState state;
+  final Future<void> Function() onChanged;
+
+  const ProfitLossPage({
+    super.key,
+    required this.state,
+    required this.onChanged,
+  });
+
+  @override
+  State<ProfitLossPage> createState() => _ProfitLossPageState();
+}
+
+class _ProfitLossPageState extends State<ProfitLossPage> {
+  final fromController = TextEditingController();
+  final toController = TextEditingController();
+  String dsrId = '';
+  String salesmanId = '';
+  String productId = '';
+
+  AppState get state => widget.state;
+
+  @override
+  void dispose() {
+    fromController.dispose();
+    toController.dispose();
+    super.dispose();
+  }
+
+  ProfitLossSummary get summary => state.calculateProfitLoss(
+        fromDate: fromController.text,
+        toDate: toController.text,
+        dsrId: dsrId,
+        salesmanId: salesmanId,
+        productId: productId,
+      );
+
+  List<_ProductProfitRow> get productRows {
+    final grouped = <String, List<SaleEntry>>{};
+    for (final sale in summary.sales) {
+      grouped.putIfAbsent(sale.productId, () => <SaleEntry>[]).add(sale);
+    }
+
+    final rows = grouped.entries.map((entry) {
+      final quantity = entry.value.fold<int>(
+          0, (sum, sale) => sum + sale.quantity);
+      final sales = entry.value.fold<double>(
+          0, (sum, sale) => sum + sale.total);
+      final cost = entry.value.fold<double>(
+          0, (sum, sale) => sum + state.saleCost(sale));
+      return _ProductProfitRow(
+        productId: entry.key,
+        quantity: quantity,
+        sales: sales,
+        cost: cost,
+        profit: sales - cost,
+      );
+    }).toList();
+
+    rows.sort((a, b) => b.profit.compareTo(a.profit));
+    return rows;
+  }
+
+  void clearFilters() {
+    setState(() {
+      fromController.clear();
+      toController.clear();
+      dsrId = '';
+      salesmanId = '';
+      productId = '';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = summary;
+    final isProfit = data.netProfit >= 0;
+    final claimNoteVisible = dsrId.isNotEmpty || salesmanId.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const DataCard(
+          title: 'Profit & Loss',
+          child: Text(
+            'This is a read-only calculation from saved sales, product cost, expenses, and claim or damage records. Recovery, deposits, and investments do not change business profit.',
+            style: TextStyle(color: Color(0xff6b7280), height: 1.5),
+          ),
+        ),
+        const SizedBox(height: 18),
+        filterCard(
+          title: 'Profit Filters',
+          children: [
+            filterText(
+              'From Date',
+              fromController,
+              onChanged: () => setState(() {}),
+            ),
+            filterText(
+              'To Date',
+              toController,
+              onChanged: () => setState(() {}),
+            ),
+            filterDropdown(
+              label: 'DSR / Booker',
+              value: dsrId,
+              items: state.dsrs
+                  .map((item) => FilterOption(item.id, item.name))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  dsrId = value;
+                  if (value.isNotEmpty) {
+                    salesmanId = state.dsrById(value)?.supplierId ?? '';
+                  }
+                });
+              },
+            ),
+            filterDropdown(
+              label: 'Salesman',
+              value: salesmanId,
+              items: state.suppliers
+                  .map((item) => FilterOption(item.id, item.name))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  salesmanId = value;
+                  if (dsrId.isNotEmpty &&
+                      state.dsrById(dsrId)?.supplierId != value) {
+                    dsrId = '';
+                  }
+                });
+              },
+            ),
+            filterDropdown(
+              label: 'Product',
+              value: productId,
+              items: state.products
+                  .map((item) => FilterOption(item.id, item.name))
+                  .toList(),
+              onChanged: (value) => setState(() => productId = value),
+            ),
+            clearFilterButton(clearFilters),
+          ],
+        ),
+        if (claimNoteVisible) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Text(
+              'Claim and damage losses are company-level records, so they are excluded when a DSR or salesman filter is selected.',
+              style: TextStyle(color: Color(0xff92400e), height: 1.4),
+            ),
+          ),
+        ],
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            StatCard(
+              title: 'Gross Sale',
+              value: state.rs(data.grossSales),
+              icon: Icons.point_of_sale_rounded,
+              color: Colors.blue,
+            ),
+            StatCard(
+              title: 'Cost of Goods Sold',
+              value: state.rs(data.costOfGoodsSold),
+              icon: Icons.inventory_2_rounded,
+              color: Colors.deepOrange,
+            ),
+            StatCard(
+              title: 'Gross Profit',
+              value: state.rs(data.grossProfit),
+              icon: Icons.trending_up_rounded,
+              color: data.grossProfit >= 0 ? Colors.green : Colors.red,
+            ),
+            StatCard(
+              title: 'Expenses',
+              value: state.rs(data.expenseOutflows),
+              icon: Icons.money_off_rounded,
+              color: Colors.orange,
+            ),
+            StatCard(
+              title: 'Claim / Damage Loss',
+              value: state.rs(data.claimLoss),
+              icon: Icons.report_problem_rounded,
+              color: Colors.redAccent,
+            ),
+            StatCard(
+              title: isProfit ? 'Net Profit' : 'Net Loss',
+              value: state.rs(data.netProfit.abs()),
+              icon: isProfit
+                  ? Icons.account_balance_wallet_rounded
+                  : Icons.trending_down_rounded,
+              color: isProfit ? Colors.green : Colors.red,
+            ),
+            StatCard(
+              title: 'Profit Margin',
+              value: '${data.profitMarginPercent.toStringAsFixed(2)}%',
+              icon: Icons.percent_rounded,
+              color: isProfit ? Colors.teal : Colors.red,
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        DataCard(
+          title: 'Product Profit Summary',
+          child: productRows.isEmpty
+              ? emptyBox('No sales found for selected filters.')
+              : horizontalTable(
+                  DataTable(
+                    columnSpacing: 10,
+                    horizontalMargin: 8,
+                    headingRowHeight: 42,
+                    dataRowMinHeight: 46,
+                    dataRowMaxHeight: 54,
+                    columns: const [
+                      DataColumn(label: Text('Product')),
+                      DataColumn(label: Text('Sold Qty')),
+                      DataColumn(label: Text('Sales')),
+                      DataColumn(label: Text('Cost')),
+                      DataColumn(label: Text('Profit / Loss')),
+                      DataColumn(label: Text('Margin')),
+                    ],
+                    rows: productRows.map((row) {
+                      final rowIsProfit = row.profit >= 0;
+                      return DataRow(cells: [
+                        DataCell(SizedBox(
+                          width: 150,
+                          child: Text(
+                            state.productName(row.productId),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
+                        DataCell(Text(row.quantity.toString())),
+                        DataCell(Text(state.rs(row.sales))),
+                        DataCell(Text(state.rs(row.cost))),
+                        DataCell(Text(
+                          state.rs(row.profit.abs()),
+                          style: TextStyle(
+                            color: rowIsProfit ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        )),
+                        DataCell(Text(
+                          '${row.marginPercent.toStringAsFixed(2)}%',
+                          style: TextStyle(
+                            color: rowIsProfit ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        )),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
+        ),
+        const SizedBox(height: 18),
+        DataCard(
+          title: 'Profit Deductions',
+          child: data.expenses.isEmpty && data.claims.isEmpty
+              ? emptyBox('No expense or claim deductions found.')
+              : horizontalTable(
+                  DataTable(
+                    columnSpacing: 10,
+                    horizontalMargin: 8,
+                    headingRowHeight: 42,
+                    dataRowMinHeight: 46,
+                    dataRowMaxHeight: 54,
+                    columns: const [
+                      DataColumn(label: Text('Date')),
+                      DataColumn(label: Text('Type')),
+                      DataColumn(label: Text('Detail')),
+                      DataColumn(label: Text('Amount')),
+                    ],
+                    rows: [
+                      ...data.expenses.map((expense) => DataRow(cells: [
+                            DataCell(Text(formatDateForUi(expense.date))),
+                            const DataCell(Text('Expense')),
+                            DataCell(SizedBox(
+                              width: 170,
+                              child: Text(
+                                expense.type,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )),
+                            DataCell(Text(state.rs(expense.amount))),
+                          ])),
+                      ...data.claims.map((claim) => DataRow(cells: [
+                            DataCell(Text(formatDateForUi(claim.date))),
+                            DataCell(Text(claim.type)),
+                            DataCell(SizedBox(
+                              width: 170,
+                              child: Text(
+                                state.productName(claim.productId),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )),
+                            DataCell(Text(state.rs(claim.amount))),
+                          ])),
+                    ],
+                  ),
+                ),
+        ),
+        const SizedBox(height: 90),
       ],
     );
   }
@@ -7889,17 +8241,15 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                 (sum, item) =>
                     sum + (item.warehouseStock * item.purchasePrice));
       case ReportType.profitLoss:
-        final saleProfit = filteredSales().fold<double>(0, (sum, sale) {
-          final cost = sale.purchaseCost > 0
-              ? sale.purchaseCost
-              : (state.productById(sale.productId)?.purchasePrice ?? 0);
-          return sum + sale.total - (cost * sale.quantity);
-        });
+        final saleProfit = filteredSales().fold<double>(
+            0, (sum, sale) => sum + state.saleProfit(sale));
         final expenses = filteredExpenses()
             .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
             .fold<double>(0, (sum, item) => sum + item.amount);
-        final claims =
-            filteredClaims().fold<double>(0, (sum, item) => sum + item.amount);
+        final claims = dsrFilter.isEmpty
+            ? filteredClaims()
+                .fold<double>(0, (sum, item) => sum + item.amount)
+            : 0.0;
         return saleProfit - expenses - claims;
     }
   }
@@ -8478,15 +8828,11 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   Widget profitLossReport() {
     final sales = filteredSales();
     final expenses = filteredExpenses();
-    final claims = filteredClaims();
+    final claims = dsrFilter.isEmpty ? filteredClaims() : <ClaimEntry>[];
 
     final saleTotal = sales.fold<double>(0, (sum, sale) => sum + sale.total);
-    final costTotal = sales.fold<double>(0, (sum, sale) {
-      final unitCost = sale.purchaseCost > 0
-          ? sale.purchaseCost
-          : (state.productById(sale.productId)?.purchasePrice ?? 0);
-      return sum + (unitCost * sale.quantity);
-    });
+    final costTotal = sales.fold<double>(
+        0, (sum, sale) => sum + state.saleCost(sale));
     final grossProfit = saleTotal - costTotal;
     final expenseTotal = expenses
         .where((item) => !AppState.cashInExpenseTypes.contains(item.type))
@@ -8521,9 +8867,8 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
             'Profit'
           ],
           rows: sales.map((sale) {
-            final product = state.productById(sale.productId);
-            final cost = (product?.purchasePrice ?? 0) * sale.quantity;
-            final profit = sale.total - cost;
+            final cost = state.saleCost(sale);
+            final profit = state.saleProfit(sale);
             return [
               formatDateForUi(sale.date),
               sale.billNo,

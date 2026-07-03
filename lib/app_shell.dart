@@ -41,6 +41,7 @@ class _AppShellState extends State<AppShell> {
     'Expenses',
     'Deposit',
     'Investment',
+    'Profit & Loss',
     'Claims / Expiry',
     'Reports',
   ];
@@ -408,6 +409,7 @@ class _AppShellState extends State<AppShell> {
       Icons.money_off_rounded,
       Icons.account_balance_rounded,
       Icons.savings_rounded,
+      Icons.trending_up_rounded,
       Icons.report_problem_rounded,
       Icons.bar_chart_rounded,
     ];
@@ -503,9 +505,13 @@ class _AppShellState extends State<AppShell> {
       case 12:
         return InvestmentPage(state: widget.state, onChanged: refresh);
       case 13:
+        return ProfitLossPage(state: widget.state, onChanged: refresh);
+      case 14:
         return ClaimPage(state: widget.state, onChanged: refresh);
-      default:
+      case 15:
         return ReportsPage(state: widget.state, onChanged: refresh);
+      default:
+        return DashboardPage(state: widget.state, onChanged: refresh);
     }
   }
 }

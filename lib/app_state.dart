@@ -1,6 +1,41 @@
 import 'models.dart';
 import 'supabase_service.dart';
 
+class ProfitLossSummary {
+  final List<SaleEntry> sales;
+  final List<ExpenseEntry> expenses;
+  final List<ClaimEntry> claims;
+  final int soldQuantity;
+  final double grossSales;
+  final double cashSales;
+  final double creditSales;
+  final double costOfGoodsSold;
+  final double grossProfit;
+  final double expenseOutflows;
+  final double claimLoss;
+  final double netProfit;
+
+  const ProfitLossSummary({
+    required this.sales,
+    required this.expenses,
+    required this.claims,
+    required this.soldQuantity,
+    required this.grossSales,
+    required this.cashSales,
+    required this.creditSales,
+    required this.costOfGoodsSold,
+    required this.grossProfit,
+    required this.expenseOutflows,
+    required this.claimLoss,
+    required this.netProfit,
+  });
+
+  double get profitMarginPercent =>
+      grossSales <= 0 ? 0 : (netProfit / grossSales) * 100;
+
+  bool get isProfit => netProfit >= 0;
+}
+
 class AppState {
   final SupabaseService service;
 
@@ -209,17 +244,108 @@ class AppState {
       totalExpenseOutflows -
       depositTotal;
 
-  double get monthlyProfitEstimate {
-    double cost = 0;
-    for (final sale in sales) {
-      final snapshotCost = sale.purchaseCost;
-      final unitCost = snapshotCost > 0
-          ? snapshotCost
-          : (productById(sale.productId)?.purchasePrice ?? 0);
-      cost += unitCost * sale.quantity;
-    }
-    return grossSale - cost - totalExpenseOutflows - claimAmount;
+  double saleUnitCost(SaleEntry sale) {
+    if (sale.purchaseCost > 0) return sale.purchaseCost;
+    return productById(sale.productId)?.purchasePrice ?? 0;
   }
+
+  double saleCost(SaleEntry sale) => saleUnitCost(sale) * sale.quantity;
+
+  double saleProfit(SaleEntry sale) => sale.total - saleCost(sale);
+
+  bool _dateMatchesRange(String date, String fromDate, String toDate) {
+    final value = date.trim();
+    final from = fromDate.trim();
+    final to = toDate.trim();
+    if (from.isNotEmpty && value.compareTo(from) < 0) return false;
+    if (to.isNotEmpty && value.compareTo(to) > 0) return false;
+    return true;
+  }
+
+  ProfitLossSummary calculateProfitLoss({
+    String fromDate = '',
+    String toDate = '',
+    String dsrId = '',
+    String salesmanId = '',
+    String productId = '',
+  }) {
+    final filteredSales = sales.where((sale) {
+      if (!_dateMatchesRange(sale.date, fromDate, toDate)) return false;
+      if (dsrId.isNotEmpty && sale.dsrId != dsrId) return false;
+      if (salesmanId.isNotEmpty &&
+          dsrById(sale.dsrId)?.supplierId != salesmanId) {
+        return false;
+      }
+      if (productId.isNotEmpty && sale.productId != productId) return false;
+      return true;
+    }).toList();
+
+    final filteredExpenses = expenses.where((expense) {
+      if (!_dateMatchesRange(expense.date, fromDate, toDate)) return false;
+      if (dsrId.isNotEmpty && expense.dsrId != dsrId) return false;
+      if (salesmanId.isNotEmpty &&
+          dsrById(expense.dsrId)?.supplierId != salesmanId) {
+        return false;
+      }
+      return !cashInExpenseTypes.contains(expense.type);
+    }).toList();
+
+    // Claims are company/product-level records and have no DSR ownership.
+    // Excluding them from DSR/salesman views prevents the same company loss
+    // from being incorrectly assigned to an individual team member.
+    final includeCompanyClaims = dsrId.isEmpty && salesmanId.isEmpty;
+    final filteredClaims = includeCompanyClaims
+        ? claims.where((claim) {
+            if (!_dateMatchesRange(claim.date, fromDate, toDate)) return false;
+            if (productId.isNotEmpty && claim.productId != productId) {
+              return false;
+            }
+            return true;
+          }).toList()
+        : <ClaimEntry>[];
+
+    final gross = filteredSales.fold<double>(
+        0, (sum, sale) => sum + sale.total);
+    final cash = filteredSales
+        .where((sale) => sale.type == SaleType.cash)
+        .fold<double>(0, (sum, sale) => sum + sale.total);
+    final credit = filteredSales
+        .where((sale) => sale.type == SaleType.credit)
+        .fold<double>(0, (sum, sale) => sum + sale.total);
+    final cost = filteredSales.fold<double>(
+        0, (sum, sale) => sum + saleCost(sale));
+    final expenseTotal = filteredExpenses.fold<double>(
+        0, (sum, expense) => sum + expense.amount);
+    final claimTotal = filteredClaims.fold<double>(
+        0, (sum, claim) => sum + claim.amount);
+    final grossProfitValue = gross - cost;
+    final netProfitValue = grossProfitValue - expenseTotal - claimTotal;
+
+    return ProfitLossSummary(
+      sales: filteredSales,
+      expenses: filteredExpenses,
+      claims: filteredClaims,
+      soldQuantity: filteredSales.fold<int>(
+          0, (sum, sale) => sum + sale.quantity),
+      grossSales: gross,
+      cashSales: cash,
+      creditSales: credit,
+      costOfGoodsSold: cost,
+      grossProfit: grossProfitValue,
+      expenseOutflows: expenseTotal,
+      claimLoss: claimTotal,
+      netProfit: netProfitValue,
+    );
+  }
+
+  double get totalCostOfGoodsSold => calculateProfitLoss().costOfGoodsSold;
+  double get grossProfit => calculateProfitLoss().grossProfit;
+  double get netProfit => calculateProfitLoss().netProfit;
+  double get profitMarginPercent =>
+      calculateProfitLoss().profitMarginPercent;
+  double get totalCapitalValue => totalInvestment + netProfit;
+
+  double get monthlyProfitEstimate => netProfit;
 
   int totalPurchasedForProduct(String productId) => companyPurchases
       .where((item) => item.productId == productId)
